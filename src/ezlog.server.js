@@ -1,0 +1,189 @@
+const logCollection = new Mongo.Collection('zodiase:ezlog/logs');
+
+const NOOP = function () {
+  console.log('NOOP called.'); //!
+};
+
+const verifyLogContent = function (content) {
+  // Test if log content is serializable.
+  try {
+    let json = EJSON.stringify(content);
+  } catch (error) {
+    throw new Error('Log content must be serializable.');
+  }
+};
+const makeArray = function (value) {
+  let result = null;
+  if (!Array.isArray(value)) {
+    if (!value) {
+      result = [];
+    } else {
+      result = [value];
+    }
+  } else {
+    result = value;
+  }
+  return result;
+};
+const returnLogFields = {
+  'createdAt': 1,
+  'logger': 1,
+  'component': 1,
+  'topics': 1,
+  'content': 1
+};
+
+class DefaultLogger {
+  // Internal function, not intended to be used directly.
+  static _contextCheck (self) {
+    if (!(self instanceof DefaultLogger)) {
+      throw new Error('Illegal invocation');
+    }
+  }
+  // Internal function, not intended to be used directly.
+  static _log (logger, content) {
+    verifyLogContent(content);
+    let newLog = {
+      'createdAt': Date.now(),
+      'logger': logger._loggerId,
+      'component': logger.component,
+      'topics': logger.topics,
+      'content': content
+    }
+    let newlogId = logCollection.insert(newLog);
+    // Trigger onLog handlers synchronously.
+    logger._triggerCallbacksFor.onLog(newlogId, newLog);
+    return newlogId;
+  }
+  // Internal function, not intended to be used directly.
+  static _getLogById (component, topics, id) {
+    id = String(id);
+    let log = logCollection.findOne({
+      '_id': id,
+      'logger': DefaultLogger._loggerId,
+      'component': component,
+      'topics': topics
+    }, {
+      'fields': returnLogFields
+    });
+    return log;
+  }
+
+  // Log something. Supports unlimited amount of arguments.
+  static log (content) {
+    let logId = DefaultLogger._log(DefaultLogger, arguments);
+    return logId;
+  }
+  // Register a function to be called when there is a new log.
+  static onLog (callback) {
+    DefaultLogger._callbacks.onLog.push(callback);
+  }
+  static getLogById (id) {
+    return DefaultLogger._getLogById(DefaultLogger.component, DefaultLogger.topics, id);
+  }
+
+  constructor (options) {
+    let self = this;
+    if (typeof options === 'undefined') {
+      options = {};
+    }
+    self.component = String(options.component) || 'default';
+    // Make topics an array.
+    options.topics = makeArray(options.topics);
+    // Convert all items to string.
+    options.topics = options.topics.map(String);
+    self.topics = options.topics;
+
+    self._loggerId = DefaultLogger._loggerId;
+    // This stores all the callbacks used by this instance.
+    self._callbacks = {
+      'onLog': []
+    };
+    self._triggerCallbacksFor = {
+      'onLog': function (id, fields) {
+        for (let cb of self._callbacks.onLog) {
+          cb(id, fields);
+        }
+      }
+    };
+  }
+  // Log something. Supports unlimited amount of arguments.
+  log () {
+    DefaultLogger._contextCheck(this);
+    let logId = DefaultLogger._log(this, arguments);
+    return logId;
+  }
+  // Register a function to be called when there is a new log.
+  onLog (callback) {
+    DefaultLogger._contextCheck(this);
+    this._callbacks.onLog.push(callback);
+  }
+  getLogById (id) {
+    DefaultLogger._contextCheck(this);
+    return DefaultLogger._getLogById(this.component, this.topics, id);
+  }
+}
+DefaultLogger._loggerId = 'default';
+DefaultLogger.component = 'default';
+DefaultLogger.topics = [];
+// This stores all the callbacks used by DefaultLogger.
+DefaultLogger._callbacks = {
+  'onLog': []
+};
+DefaultLogger._triggerCallbacksFor = {
+  'onLog': function (id, fields) {
+    for (let cb of DefaultLogger._callbacks.onLog) {
+      cb(id, fields);
+    }
+  }
+};
+
+EZLog = function () {
+  // Should not be used as a constructor.
+  if (this instanceof EZLog) {
+    throw new Error('EZLog can not be used as a constructor. Call directly instead.');
+  }
+};
+
+EZLog.DefaultLogger = DefaultLogger;
+// EZLog.log mirrors EZLog.DefaultLogger.log.
+EZLog.log = EZLog.DefaultLogger.log;
+// EZLog.onLog mirrors EZLog.DefaultLogger.onLog.
+EZLog.onLog = EZLog.DefaultLogger.onLog;
+// EZLog.getLogById mirrors EZLog.DefaultLogger.getLogById.
+EZLog.getLogById = EZLog.DefaultLogger.getLogById;
+
+
+
+
+
+
+
+// Register a function to be called when there is a new log.
+/*
+EZLog.onLog = function (callback) {
+  EZLog._callbacks.onLog.push(callback);
+};
+// This stores all the callbacks used by EZLog.
+EZLog._callbacks = {
+  'onLog': []
+};
+// This stores all the observers used by EZLog.
+EZLog._observers = {
+  // Monitor logCollection and trigger onLog callbacks.
+  'overwatch': logCollection.find({}, {
+    'sort': {},
+    'fields': {}
+  }).observeChanges({
+    'added': function (id, fields) {
+      if (EZLog._initializing) {
+        return;
+      }
+      //else
+      for (let cb of EZLog._callbacks.onLog) {
+        cb(id);
+      }
+    }
+  })
+};
+*/
