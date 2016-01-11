@@ -1,5 +1,15 @@
 const logCollection = new Mongo.Collection('zodiase:ezlog/logs');
 
+// Set indexes.
+const indexes = {
+  'createdAt': 1,
+  'logger': 1,
+  'component': 'text',
+  'topics': 1,
+}
+//logCollection._dropIndex('');
+logCollection._ensureIndex(indexes);
+
 const NOOP = function () {
   console.log('NOOP called.'); //!
 };
@@ -43,6 +53,13 @@ class DefaultLogger {
   // Internal function, not intended to be used directly.
   static _log (logger, content) {
     verifyLogContent(content);
+    try {
+      check(logger._loggerId, String);
+      check(logger.component, String);
+      check(logger.topics, [String]);
+    } catch (error) {
+      throw new Error('Invalid input.');
+    }
     let newLog = {
       'createdAt': Date.now(),
       'logger': logger._loggerId,
