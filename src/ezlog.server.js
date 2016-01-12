@@ -35,15 +35,14 @@ const makeArray = function (value) {
   }
   return result;
 };
-const returnLogFields = {
-  'createdAt': 1,
-  'logger': 1,
-  'component': 1,
-  'topics': 1,
-  'content': 1
-};
 
 class DefaultLogger {
+  // Internal function, not intended to be used directly.
+  static _identityCheck (logger) {
+    if (!(logger instanceof DefaultLogger || logger === DefaultLogger)) {
+      throw new Error('Illegal invocation');
+    }
+  }
   // Internal function, not intended to be used directly.
   static _contextCheck (self) {
     if (!(self instanceof DefaultLogger)) {
@@ -52,6 +51,7 @@ class DefaultLogger {
   }
   // Internal function, not intended to be used directly.
   static _log (logger, content) {
+    DefaultLogger._identityCheck(logger);
     verifyLogContent(content);
     try {
       check(logger._loggerId, String);
@@ -62,7 +62,7 @@ class DefaultLogger {
     }
     let newLog = {
       'createdAt': Date.now(),
-      'logger': logger._loggerId,
+      'logger': DefaultLogger._loggerId,
       'component': logger.component,
       'topics': logger.topics,
       'content': content
@@ -73,15 +73,16 @@ class DefaultLogger {
     return newlogId;
   }
   // Internal function, not intended to be used directly.
-  static _getLogById (component, topics, id) {
-    id = String(id);
+  static _getLogById (logger, id) {
+    DefaultLogger._identityCheck(logger);
+    check(id, String);
     let log = logCollection.findOne({
       '_id': id,
       'logger': DefaultLogger._loggerId,
-      'component': component,
-      'topics': topics
+      'component': logger.component,
+      'topics': logger.topics
     }, {
-      'fields': returnLogFields
+      'fields': DefaultLogger._returnLogFields
     });
     return log;
   }
@@ -96,7 +97,7 @@ class DefaultLogger {
     DefaultLogger._callbacks.onLog.push(callback);
   }
   static getLogById (id) {
-    return DefaultLogger._getLogById(DefaultLogger.component, DefaultLogger.topics, id);
+    return DefaultLogger._getLogById(DefaultLogger, id);
   }
 
   constructor (options) {
@@ -137,9 +138,16 @@ class DefaultLogger {
   }
   getLogById (id) {
     DefaultLogger._contextCheck(this);
-    return DefaultLogger._getLogById(this.component, this.topics, id);
+    return DefaultLogger._getLogById(this, id);
   }
 }
+DefaultLogger._returnLogFields = {
+  'createdAt': 1,
+  'logger': 1,
+  'component': 1,
+  'topics': 1,
+  'content': 1
+};
 DefaultLogger._loggerId = 'default';
 DefaultLogger.component = 'default';
 DefaultLogger.topics = [];
