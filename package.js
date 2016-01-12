@@ -12,6 +12,7 @@ Package.onUse(function(api) {
   api.use('check');
   api.use('ejson');
   api.use('mongo');
+  api.use('zodiase:check@0.0.1');
   api.export('EZLog', ['client', 'server']);
   api.addFiles('src/ezlog.client.js', 'client');
   api.addFiles('src/ezlog.server.js', 'server');

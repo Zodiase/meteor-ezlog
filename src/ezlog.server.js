@@ -75,7 +75,7 @@ class DefaultLogger {
   // Internal function, not intended to be used directly.
   static _getLogById (logger, id) {
     DefaultLogger._identityCheck(logger);
-    check(id, String);
+    check(id, String, 'Expect id to be a string.');
     let log = logCollection.findOne({
       '_id': id,
       'logger': DefaultLogger._loggerId,
