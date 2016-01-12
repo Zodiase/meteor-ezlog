@@ -132,7 +132,7 @@ class DefaultLogger {
     };
   }
   // Log something. Supports unlimited amount of arguments.
-  log () {
+  log (arg0, arg1, arg2, argN) {
     DefaultLogger._contextCheck(this);
     let logId = DefaultLogger._log(this, arguments);
     return logId;
