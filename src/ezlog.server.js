@@ -73,6 +73,12 @@ class DefaultLogger {
     return newlogId;
   }
   // Internal function, not intended to be used directly.
+  static _onLog (logger, callback) {
+    DefaultLogger._identityCheck(logger);
+    check(callback, Function, 'Callback is not a function.');
+    logger._callbacks.onLog.push(callback);
+  }
+  // Internal function, not intended to be used directly.
   static _getLogById (logger, id) {
     DefaultLogger._identityCheck(logger);
     check(id, String, 'Expect id to be a string.');
@@ -94,7 +100,7 @@ class DefaultLogger {
   }
   // Register a function to be called when there is a new log.
   static onLog (callback) {
-    DefaultLogger._callbacks.onLog.push(callback);
+    DefaultLogger._onLog(DefaultLogger, callback);
   }
   static getLogById (id) {
     return DefaultLogger._getLogById(DefaultLogger, id);
@@ -134,7 +140,7 @@ class DefaultLogger {
   // Register a function to be called when there is a new log.
   onLog (callback) {
     DefaultLogger._contextCheck(this);
-    this._callbacks.onLog.push(callback);
+    DefaultLogger._onLog(this, callback);
   }
   getLogById (id) {
     DefaultLogger._contextCheck(this);
