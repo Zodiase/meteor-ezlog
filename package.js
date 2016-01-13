@@ -20,6 +20,7 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use('ecmascript');
+  api.use('ejson');
   api.use('tinytest');
   api.use('zodiase:ezlog');
   api.addFiles('tests/client.js', 'client');
