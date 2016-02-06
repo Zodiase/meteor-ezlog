@@ -8,21 +8,29 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
-  api.use('ecmascript');
-  api.use('check');
-  api.use('ejson');
-  api.use('mongo');
-  api.use('zodiase:check@0.0.1');
+  api.use([
+    'ecmascript',
+    'check',
+    'ejson',
+    'mongo',
+    'zodiase:check@0.0.4'
+  ]);
   api.export('EZLog', ['client', 'server']);
+  api.addFiles([
+    'src/ezlog.common.js',
+    'src/DefaultLogger.js'
+  ], ['client', 'server']);
   api.addFiles('src/ezlog.client.js', 'client');
   api.addFiles('src/ezlog.server.js', 'server');
 });
 
 Package.onTest(function(api) {
-  api.use('ecmascript');
-  api.use('ejson');
-  api.use('tinytest');
-  api.use('zodiase:ezlog');
-  api.addFiles('tests/client.js', 'client');
-  api.addFiles('tests/server.js', 'server');
+  api.use([
+    'ecmascript',
+    'ejson',
+    'tinytest',
+    'zodiase:ezlog'
+  ]);
+  api.use('tracker', 'client');
+  api.addFiles('tests/common.js', ['client', 'server']);
 });
