@@ -84,6 +84,23 @@ function testBasicAPIs (name, logger) {
     test.equal(flag, true, 'Log captured');
   });
 
+  Tinytest.add(name + ' onLog() can register multiple log callbacks', function (test) {
+    let flags = [
+      false,
+      false
+    ];
+    let callback = function (flags, index, id) {
+      flags[index] = true;
+    };
+    // Register first callback.
+    logger.onLog(callback.bind(null, flags, 0));
+    // Register second callback.
+    logger.onLog(callback.bind(null, flags, 1));
+    logger.log('test');
+    test.equal(flags[0], true, 'Callback 1 registered');
+    test.equal(flags[1], true, 'Callback 2 registered');
+  });
+
   Tinytest.add(name + ' count() returns a number', function (test) {
     test.equal(typeof logger.count(), 'number', '.count() returns a number');
   });
