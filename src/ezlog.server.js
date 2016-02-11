@@ -1,7 +1,6 @@
 const {
   logCollection,
-  indexes,
-  createMirror
+  indexes
 } = helpers;
 
 logCollection.allow({
@@ -31,7 +30,3 @@ logCollection.deny({
 // Set indexes.
 //logCollection._dropIndex('');
 logCollection._ensureIndex(indexes);
-
-EZLog.DefaultLogger = DefaultLogger;
-
-createMirror(EZLog.DefaultLogger, EZLog);

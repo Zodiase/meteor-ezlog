@@ -4,20 +4,31 @@ const {
   NOOP,
   verifyLogContent,
   makeArray,
-  sliceArguments
+  sliceArguments,
+  createMirror
 } = helpers;
 
-class DefaultLogger {
+/**
+ * Default logger class.
+ * @class
+ * @extends EZLog.Base
+ * @memberof EZLog
+ */
+class DefaultLogger extends EZLog.Base {
+
+  /**
+   * Helper function for initializing DefaultLogger singleton and its instances.
+   * @private
+   * @param {DefaultLogger} self - The instance to be initialized.
+   * @param {Object} options - Same options as the constructor.
+   */
   static _initialize (self, options) {
     if (typeof options === 'undefined') {
       options = {};
     }
     self.component = String(options.component) || 'default';
-    // Make topics an array.
-    options.topics = makeArray(options.topics);
-    // Convert all items to string.
-    options.topics = options.topics.map(String);
-    self.topics = options.topics;
+    // Make topics an array of Strings.
+    self.topics = makeArray(options.topics).map(String);
 
     // This stores all the callbacks used by this instance.
     self._callbacks = {
@@ -39,23 +50,44 @@ class DefaultLogger {
       '_createdOrder': 0
     };
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * Helper function for generating pub/sub names.
+   * @private
+   * @param {DefaultLogger} logger - The targeted logger instance.
+   * @return {String} The pub/sub name.
+   */
   static _getPublishName (logger) {
     return namespace + DefaultLogger._loggerId + '/' + logger.component;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * Helper function for checking if the logger is an instance of this class or is the singleton.
+   * @private
+   * @param {DefaultLogger} logger - The targeted logger instance.
+   * @throws {Error} `logger` must be an instance of this class or is the singleton.
+   */
   static _identityCheck (logger) {
     if (!(logger instanceof DefaultLogger || logger === DefaultLogger)) {
       throw new Error('Illegal invocation');
     }
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * Helper function for checking if the context is an instance of this class.
+   * @private
+   * @param {DefaultLogger} self - The context.
+   * @throws {Error} `self` must be an instance of this class.
+   */
   static _contextCheck (self) {
     if (!(self instanceof DefaultLogger)) {
       throw new Error('Illegal invocation');
     }
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _log (logger, content) {
     let createdAt = Date.now();
     DefaultLogger._identityCheck(logger);
@@ -89,13 +121,19 @@ class DefaultLogger {
     logger._triggerCallbacksFor.onLog(newlogId, newLog);
     return newlogId;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _onLog (logger, callback) {
     DefaultLogger._identityCheck(logger);
     check(callback, Function, 'Callback is not a function.');
     logger._callbacks.onLog.push(callback);
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _getLogById (logger, id) {
     DefaultLogger._identityCheck(logger);
     check(id, String, 'Expect id to be a string.');
@@ -108,7 +146,10 @@ class DefaultLogger {
     });
     return log;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _count (logger) {
     DefaultLogger._identityCheck(logger);
     //else
@@ -122,7 +163,10 @@ class DefaultLogger {
     });
     return cursor.count();
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _getLatestLogs (logger, count) {
     DefaultLogger._identityCheck(logger);
     check(count, Match.Integer, 'Expect count to be an integer.');
@@ -144,7 +188,10 @@ class DefaultLogger {
     let logItems = cursor.fetch();
     return logItems;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _getEarliestLogs (logger, count) {
     DefaultLogger._identityCheck(logger);
     check(count, Match.Integer, 'Expect count to be an integer.');
@@ -166,7 +213,10 @@ class DefaultLogger {
     let logItems = cursor.fetch();
     return logItems;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _dumpEarliestLogs (logger, count) {
     let logItems = DefaultLogger._getEarliestLogs(logger, count);
     let logIds = logItems.map(function (item, index) {
@@ -179,7 +229,10 @@ class DefaultLogger {
     });
     return logItems;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _wipe (logger) {
     DefaultLogger._identityCheck(logger);
     let removeCount = logCollection.remove({
@@ -190,11 +243,15 @@ class DefaultLogger {
     logger.log('Logs Wiped.');
     return removeCount;
   }
-  // Internal function, not intended to be used directly.
+
+  /**
+   * @private
+   */
   static _publish (logger) {
     DefaultLogger._identityCheck(logger);
     let publishName = DefaultLogger._getPublishName(logger);
-    Meteor.publish(publishName, function (count) {
+    Meteor.publish(publishName, function (limit) {
+      check(limit, Match.Integer);
       let cursor = logCollection.find({
         'logger': DefaultLogger._loggerId,
         'component': logger.component
@@ -203,93 +260,122 @@ class DefaultLogger {
           ['createdAt', 'desc'],
           ['_createdOrder', 'desc']
         ],
-        'limit': count,
+        'limit': limit,
         'fields': DefaultLogger._returnLogFields
       });
       return cursor;
     });
   }
-  // Internal function, not intended to be used directly.
-  static _subscribe (logger) {
+
+  /**
+   * @private
+   */
+  static _subscribe (logger, limit) {
     DefaultLogger._identityCheck(logger);
     let publishName = DefaultLogger._getPublishName(logger);
-    return Meteor.subscribe(publishName);
+    return Meteor.subscribe(publishName, limit);
   }
 
-  // Log something. Supports unlimited amount of arguments.
-  static log (arg0, arg1, arg2, argN) {
+  /**
+   * @static
+   * @inheritdoc
+   */
+  static log (item) {
     let args = sliceArguments(arguments);
     let logId = DefaultLogger._log(DefaultLogger, args);
     return logId;
   }
-  // Register a function to be called when there is a new log.
+  /** @inheritdoc */
   static onLog (callback) {
     DefaultLogger._onLog(DefaultLogger, callback);
   }
+  /** @inheritdoc */
   static getLogById (id) {
     return DefaultLogger._getLogById(DefaultLogger, id);
   }
+  /** @inheritdoc */
   static count () {
     return DefaultLogger._count(DefaultLogger);
   }
+  /** @inheritdoc */
   static getLatestLogs (count) {
     return DefaultLogger._getLatestLogs(DefaultLogger, count);
   }
+  /** @inheritdoc */
   static getEarliestLogs (count) {
     return DefaultLogger._getEarliestLogs(DefaultLogger, count);
   }
+  /** @inheritdoc */
   static wipe () {
     return DefaultLogger._wipe(DefaultLogger);
   }
+  /** @inheritdoc */
   static publish () {
     return DefaultLogger._publish(DefaultLogger);
   }
-  static subscribe () {
-    return DefaultLogger._subscribe(DefaultLogger);
+  /** @inheritdoc */
+  static subscribe (limit) {
+    return DefaultLogger._subscribe(DefaultLogger, limit);
   }
 
+  /**
+   * Create a default logger.
+   * @constructs EZLog.DefaultLogger
+   * @param {Object} [options] - Optional configurations.
+   * @param {String} [options.component] - The name of the component this logger is for. Default is `"default"`.
+   * @param {Array.<String>} [options.topics] - A list of topics associated with this logger. Default is `[]`.
+   */
   constructor (options) {
+    super();
     DefaultLogger._initialize(this, options);
   }
-  // Log something. Supports unlimited amount of arguments.
-  log (arg0, arg1, arg2, argN) {
+
+  /** @inheritdoc */
+  log (item) {
     DefaultLogger._contextCheck(this);
     let args = sliceArguments(arguments);
     let logId = DefaultLogger._log(this, args);
     return logId;
   }
-  // Register a function to be called when there is a new log.
+  /** @inheritdoc */
   onLog (callback) {
     DefaultLogger._contextCheck(this);
     DefaultLogger._onLog(this, callback);
   }
+  /** @inheritdoc */
   getLogById (id) {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._getLogById(this, id);
   }
+  /** @inheritdoc */
   count () {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._count(this);
   }
+  /** @inheritdoc */
   getLatestLogs (count) {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._getLatestLogs(this, count);
   }
+  /** @inheritdoc */
   getEarliestLogs (count) {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._getEarliestLogs(this, count);
   }
+  /** @inheritdoc */
   wipe () {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._wipe(this);
   }
+  /** @inheritdoc */
   publish () {
     DefaultLogger._contextCheck(this);
     return DefaultLogger._publish(this);
   }
-  subscribe () {
+  /** @inheritdoc */
+  subscribe (limit) {
     DefaultLogger._contextCheck(this);
-    return DefaultLogger._subscribe(this);
+    return DefaultLogger._subscribe(this, limit);
   }
 }
 DefaultLogger._returnLogFields = {
@@ -306,7 +392,7 @@ DefaultLogger._initialize(DefaultLogger, {
   'topics': []
 });
 
-const self = this.DefaultLogger = DefaultLogger;
+const self = DefaultLogger;
 
 // Remove unsupported functions.
 if (Meteor.isClient) {
@@ -316,3 +402,6 @@ if (Meteor.isClient) {
 if (Meteor.isServer) {
   self._subscribe = NOOP.bind(null);
 }
+
+EZLog.DefaultLogger = DefaultLogger;
+createMirror(EZLog.DefaultLogger, EZLog);

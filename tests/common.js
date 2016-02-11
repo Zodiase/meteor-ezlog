@@ -28,9 +28,11 @@ Meteor.methods({
   }
 });
 
+let apis = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
+
 Tinytest.add('EZLog basics', function (test) {
 
-  test.equal(typeof EZLog, 'function', 'typeof EZLog is function');
+  test.equal(typeof EZLog, 'object', 'typeof EZLog is object');
   // Can not use EZLog as a constructor.
   test.throws(function () {
     let logger = new EZLog();
@@ -38,8 +40,23 @@ Tinytest.add('EZLog basics', function (test) {
 
 });
 
-Tinytest.add('EZLog.DefaultLogger is of type function', function (test) {
+Tinytest.add('EZLog.Base is an abstract class', function (test) {
+
+  test.equal(typeof EZLog.Base, 'function', 'typeof EZLog.Base is function');
+  // Can not use EZLog.Base as a constructor.
+  test.throws(function () {
+    let logger = new EZLog.Base();
+  });
+  // Can not call any of the static methods or instance methods.
+  for (let methodName of apis) {
+    test.throws(EZLog.Base[methodName]);
+    test.throws(EZLog.Base.prototype[methodName]);
+  }
+});
+
+Tinytest.add('EZLog.DefaultLogger inherits from ', function (test) {
   test.equal(typeof EZLog.DefaultLogger, 'function', 'typeof EZLog.DefaultLogger is function');
+  test.instanceOf(EZLog.DefaultLogger.prototype, EZLog.Base, 'EZLog.DefaultLogger inherits from EZLog.Base.');
 });
 testBasicAPIs('EZLog.DefaultLogger', EZLog.DefaultLogger);
 testBasicAPIs('EZLog.DefaultLogger instance', new EZLog.DefaultLogger({
@@ -51,7 +68,7 @@ testBasicAPIs('EZLog.DefaultLogger instance', new EZLog.DefaultLogger({
 }));
 
 Tinytest.add('EZLog properties', function (test) {
-  let mirroredProperties = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
+  let mirroredProperties = apis;
   for (let propName of mirroredProperties) {
     test.equal(EZLog[propName], EZLog.DefaultLogger[propName], 'EZLog.' + propName + ' mirrors EZLog.DefaultLogger.' + propName + '');
   }
@@ -65,7 +82,7 @@ function testBasicAPIs (name, logger) {
   }
 
   Tinytest.add(name + ' method definitions check', function (test) {
-    let methods = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
+    let methods = apis;
     for (let propName of methods) {
       test.equal(typeof logger[propName], 'function', 'typeof .' + propName + ' is function');
     }
@@ -211,7 +228,7 @@ function testBasicAPIs (name, logger) {
   if (Meteor.isClient) {
     Tinytest.addAsync(name + ' pub/sub connection', function (test, next) {
       Meteor.call('publish', name, function (error, result) {
-        subHandle = logger.subscribe();
+        subHandle = logger.subscribe(1);
         Tracker.autorun(function (comp) {
           if (subHandle.ready()) {
             comp.stop();

@@ -1,7 +1,6 @@
 const {
   logCollection,
-  indexes,
-  createMirror
+  indexes
 } = helpers;
 
 logCollection.allow({
@@ -27,7 +26,3 @@ logCollection.deny({
     return true;
   }
 });
-
-EZLog.DefaultLogger = DefaultLogger;
-
-createMirror(EZLog.DefaultLogger, EZLog);
