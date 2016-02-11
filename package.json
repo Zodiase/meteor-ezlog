@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "A simple logger for meteor.",
   "scripts": {
+    "test": "make test && node start_test.js",
     "meteor-test": "meteor test-packages ./",
     "docs": "jsdoc2md src/*.js > api.md"
   },
