@@ -24,6 +24,10 @@ Package.onUse(function(api) {
   api.addFiles('src/ezlog.server.js', 'server');
 });
 
+Npm.depends({
+  "phantomjs-polyfill": "0.0.1"
+});
+
 Package.onTest(function(api) {
   api.use([
     'ecmascript',
