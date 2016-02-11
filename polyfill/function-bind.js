@@ -1,4 +1,6 @@
+console.log('function-bind');
 if (!Function.prototype.bind) {
+  console.log('polyfill-ed');
   Function.prototype.bind = function(oThis) {
     if (typeof this !== 'function') {
       // closest thing possible to the ECMAScript 5
