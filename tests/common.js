@@ -1,9 +1,8 @@
 let callTargets = {};
 Meteor.methods({
-  "done": function (target) {
+  "count": function (target) {
     if (callTargets[target]) {
-      delete callTargets[target];
-      return true;
+      return callTargets[target].count();
     }
     return false;
   },
@@ -29,6 +28,12 @@ Meteor.methods({
 });
 
 let apis = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('Wait server ready', function (test, next) {
+    Meteor.startup(next);
+  });
+}
 
 Tinytest.add('EZLog basics', function (test) {
 
@@ -292,7 +297,18 @@ function testBasicAPIs (name, logger) {
   if (Meteor.isClient) {
     Tinytest.addAsync(name + ' clean up', function (test, next) {
       Meteor.call('wipe', name, function (error, result) {
-        Meteor.call('done', name, next);
+        if (error) {
+          throw error;
+        } else {
+          Meteor.call('count', name, function (error, result) {
+            if (error) {
+              throw error;
+            } else {
+              test.equal(result, 1, 'count() after wipe() should be 1.');
+              next();
+            }
+          });
+        }
       });
     });
   }
