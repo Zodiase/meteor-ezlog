@@ -105,6 +105,8 @@ class DefaultLogger extends EZLog.Base {
     let newLog = {
       'createdAt': createdAt,
       '_createdOrder': createdOrder,
+      // 1 means client, 0 means server.
+      'platform': Number(Meteor.isClient),
       'logger': DefaultLogger._loggerId,
       'component': logger.component,
       'topics': logger.topics,
