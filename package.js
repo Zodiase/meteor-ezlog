@@ -6,6 +6,10 @@ Package.describe({
   documentation: 'README.md'
 });
 
+Npm.depends({
+  "phantomjs-polyfill": "0.0.1"
+});
+
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
   api.use([
@@ -15,6 +19,10 @@ Package.onUse(function(api) {
     'mongo',
     'zodiase:check@0.0.4'
   ]);
+
+  // PhantomJS doesn't have Function.prototype.bind.
+  api.addFiles('polyfill/function-bind.js', ['client', 'server']);
+
   api.export('EZLog', ['client', 'server']);
   api.addFiles([
     'src/ezlog.common.js',
@@ -22,10 +30,6 @@ Package.onUse(function(api) {
   ], ['client', 'server']);
   api.addFiles('src/ezlog.client.js', 'client');
   api.addFiles('src/ezlog.server.js', 'server');
-});
-
-Npm.depends({
-  "phantomjs-polyfill": "0.0.1"
 });
 
 Package.onTest(function(api) {
@@ -36,7 +40,5 @@ Package.onTest(function(api) {
     'zodiase:ezlog'
   ]);
   api.use('tracker', 'client');
-  // PhantomJS doesn't have Function.prototype.bind.
-  api.addFiles('polyfill/function-bind.js', ['client', 'server']);
   api.addFiles('tests/common.js', ['client', 'server']);
 });
