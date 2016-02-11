@@ -16,9 +16,6 @@ Package.onUse(function(api) {
     'zodiase:check@0.0.4'
   ]);
 
-  // PhantomJS doesn't have Function.prototype.bind.
-  api.addFiles('polyfill/function-bind.js', ['client', 'server']);
-
   api.export('EZLog', ['client', 'server']);
   api.addFiles([
     'src/ezlog.common.js',
@@ -33,6 +30,7 @@ Package.onTest(function(api) {
     'ecmascript',
     'ejson',
     'tinytest',
+    'zodiase:function-bind@0.0.1', // Polyfill for PhantomJS.
     'zodiase:ezlog'
   ]);
   api.use('tracker', 'client');
