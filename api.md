@@ -97,8 +97,8 @@ Create a default logger.
 | Param | Type | Description |
 | --- | --- | --- |
 | [options] | <code>Object</code> | Optional configurations. |
-| [options.component] | <code>String</code> | The name of the component this logger is for. Default is `"default"`. |
-| [options.topics] | <code>Array.&lt;String&gt;</code> | A list of topics associated with this logger. Default is `[]`. |
+| [options.component] | <code>String</code> | The name of the component this logger is for. The value is case-insensitive. Default is `"default"`. |
+| [options.topics] | <code>Array.&lt;String&gt;</code> | A list of topics associated with this logger. The values are case-insensitive and the order doesn't matter. Default is `[]`. |
 
 <a name="EZLog.Base+log"></a>
 #### defaultLogger.log(...item) ⇒ <code>String</code>

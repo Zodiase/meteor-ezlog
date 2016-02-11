@@ -26,9 +26,9 @@ class DefaultLogger extends EZLog.Base {
     if (typeof options === 'undefined') {
       options = {};
     }
-    self.component = String(options.component) || 'default';
-    // Make topics an array of Strings.
-    self.topics = makeArray(options.topics).map(String);
+    self.component = String(options.component).toLowerCase() || 'default';
+    // Make topics a sorted array of lowercase Strings.
+    self.topics = makeArray(options.topics).map((x) => String(x).toLowerCase()).sort((a, b) => a > b);
 
     // This stores all the callbacks used by this instance.
     self._callbacks = {
@@ -140,7 +140,8 @@ class DefaultLogger extends EZLog.Base {
     let log = logCollection.findOne({
       '_id': id,
       'logger': DefaultLogger._loggerId,
-      'component': logger.component
+      'component': logger.component,
+      'topics': logger.topics
     }, {
       'fields': DefaultLogger._returnLogFields
     });
@@ -155,7 +156,8 @@ class DefaultLogger extends EZLog.Base {
     //else
     let cursor = logCollection.find({
       'logger': DefaultLogger._loggerId,
-      'component': logger.component
+      'component': logger.component,
+      'topics': logger.topics
     }, {
       'fields': {
         '_id': 1
@@ -176,7 +178,8 @@ class DefaultLogger extends EZLog.Base {
     //else
     let cursor = logCollection.find({
       'logger': DefaultLogger._loggerId,
-      'component': logger.component
+      'component': logger.component,
+      'topics': logger.topics
     }, {
       'sort': [
         ['createdAt', 'desc'],
@@ -201,7 +204,8 @@ class DefaultLogger extends EZLog.Base {
     //else
     let cursor = logCollection.find({
       'logger': DefaultLogger._loggerId,
-      'component': logger.component
+      'component': logger.component,
+      'topics': logger.topics
     }, {
       'sort': [
         ['createdAt', 'asc'],
@@ -237,7 +241,8 @@ class DefaultLogger extends EZLog.Base {
     DefaultLogger._identityCheck(logger);
     let removeCount = logCollection.remove({
       'logger': DefaultLogger._loggerId,
-      'component': logger.component
+      'component': logger.component,
+      'topics': logger.topics
     });
     // Log wipe.
     logger.log('Logs Wiped.');
@@ -254,7 +259,8 @@ class DefaultLogger extends EZLog.Base {
       check(limit, Match.Integer);
       let cursor = logCollection.find({
         'logger': DefaultLogger._loggerId,
-        'component': logger.component
+        'component': logger.component,
+        'topics': logger.topics
       }, {
         'sort': [
           ['createdAt', 'desc'],
@@ -322,8 +328,8 @@ class DefaultLogger extends EZLog.Base {
    * Create a default logger.
    * @constructs EZLog.DefaultLogger
    * @param {Object} [options] - Optional configurations.
-   * @param {String} [options.component] - The name of the component this logger is for. Default is `"default"`.
-   * @param {Array.<String>} [options.topics] - A list of topics associated with this logger. Default is `[]`.
+   * @param {String} [options.component] - The name of the component this logger is for. The value is case-insensitive. Default is `"default"`.
+   * @param {Array.<String>} [options.topics] - A list of topics associated with this logger. The values are case-insensitive and the order doesn't matter. Default is `[]`.
    */
   constructor (options) {
     super();
