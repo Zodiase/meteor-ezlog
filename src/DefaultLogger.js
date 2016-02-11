@@ -117,6 +117,8 @@ class DefaultLogger extends EZLog.Base {
       'createdAt': createdAt,
       '_createdOrder': createdOrder
     };
+    // Fetch the new log from collection.
+    newLog = DefaultLogger._getLogById(logger, newlogId);
     // Trigger onLog handlers synchronously.
     logger._triggerCallbacksFor.onLog(newlogId, newLog);
     return newlogId;
