@@ -2,12 +2,8 @@
   "name": "meteor-ezlog",
   "version": "0.0.1",
   "description": "A simple logger for meteor.",
-  "main": "package.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
-    "test": "meteor test-packages ./",
+    "meteor-test": "meteor test-packages ./",
     "docs": "jsdoc2md src/*.js > api.md"
   },
   "repository": {
