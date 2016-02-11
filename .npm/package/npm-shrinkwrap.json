@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "phantomjs-polyfill": {
-      "version": "0.0.1"
-    }
-  }
-}
