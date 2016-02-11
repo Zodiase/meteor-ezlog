@@ -133,6 +133,33 @@ class DefaultLogger extends EZLog.Base {
     DefaultLogger._identityCheck(logger);
     check(callback, Function, 'Callback is not a function.');
     logger._callbacks.onLog.push(callback);
+    if (!logger._callbacks.onLog.observer && logger._callbacks.onLog.length > 0) {
+      (function(logger) {
+        // Setup observer.
+        // Observer is only used for logs created at the other platform.
+        let cursor = logCollection.find({
+          'platform': Number(!Meteor.isClient),
+          'logger': DefaultLogger._loggerId,
+          'component': logger.component,
+          'topics': logger.topics
+        }, {
+          'fields': {
+            '_id': 1
+          }
+        });
+        logger._callbacks.onLog.observerStarting = true;
+        let observer = cursor.observeChanges({
+          'added': function (id, fields) {
+            if (logger._callbacks.onLog.observerStarting) return;
+            let newLog = DefaultLogger._getLogById(logger, id);
+            // Trigger onLog handlers synchronously.
+            logger._triggerCallbacksFor.onLog(id, newLog);
+          }
+        });
+        delete logger._callbacks.onLog.observerStarting;
+        logger._callbacks.onLog.observer = observer;
+      })(logger);
+    }
   }
 
   /**
