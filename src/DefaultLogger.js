@@ -463,20 +463,20 @@ DefaultLogger._registerCallback = function (logger, eventName, callback) {
   }
 };
 
-// Use the constructor to initialize static properties.
-DefaultLogger._initialize(DefaultLogger, {
-  "component": DefaultLogger._CONSTS.DefaultComponent,
-  "topics": DefaultLogger._CONSTS.DefaultTopics
-});
-
 // Remove unsupported functions on each platform.
 if (Meteor.isClient) {
-  DefaultLogger._publish = NOOP.bind(null);
+  DefaultLogger._publish = NOOP.bind(null, null);
   DefaultLogger._wipe = NOOP.bind(null, 0);
 }
 if (Meteor.isServer) {
   DefaultLogger._subscribe = NOOP.bind(null);
 }
+
+// Use the constructor to initialize static properties.
+DefaultLogger._initialize(DefaultLogger, {
+  "component": DefaultLogger._CONSTS.DefaultComponent,
+  "topics": DefaultLogger._CONSTS.DefaultTopics
+});
 
 // Attach to namespace.
 EZLog.DefaultLogger = DefaultLogger;
