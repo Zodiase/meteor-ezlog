@@ -30,25 +30,20 @@ class DefaultLogger extends EZLog.Base {
     // Make topics a sorted array of lowercase Strings.
     self.topics = makeArray(options.topics).map((x) => String(x).toLowerCase()).sort((a, b) => a > b);
 
-    // This stores all the callbacks used by this instance.
-    self._callbacks = {
-      'onLog': []
-    };
-    self._triggerCallbacksFor = {
-      'onLog': function (id, fields) {
-        for (let cb of self._callbacks.onLog) {
-          cb(id, fields);
-        }
-      }
-    };
-    // Stores the ID and time of the last log.
-    self._lastLog = {
-      '_id': '',
-      'createdAt': null,
-      // In case two logs have the same log time, increment this field to
-      // distinguish the order of creation.
-      '_createdOrder': 0
-    };
+    // Generate a signature for this logger. Multiple loggers may share the same signature.
+    self.signature = EJSON.stringify([self.component, self.topics]);
+
+    self.log = DefaultLogger._log.bind(DefaultLogger, self);
+    self.onLog = DefaultLogger._onLog.bind(DefaultLogger, self);
+    self.getLogById = DefaultLogger._getLogById.bind(DefaultLogger, self);
+    self.count = DefaultLogger._count.bind(DefaultLogger, self);
+    self.getLatestLogs = DefaultLogger._getLatestLogs.bind(DefaultLogger, self);
+    self.getEarliestLogs = DefaultLogger._getEarliestLogs.bind(DefaultLogger, self);
+    self.wipe = DefaultLogger._wipe.bind(DefaultLogger, self);
+    self.publish = DefaultLogger._publish.bind(DefaultLogger, self);
+    self.subscribe = DefaultLogger._subscribe.bind(DefaultLogger, self);
+
+    // Callbacks are shared with loggers with the same signature.
   }
 
   /**
@@ -58,7 +53,7 @@ class DefaultLogger extends EZLog.Base {
    * @return {String} The pub/sub name.
    */
   static _getPublishName (logger) {
-    return namespace + DefaultLogger._loggerId + '/' + logger.component;
+    return namespace + DefaultLogger._CONSTS.LoggerId + '/' + logger.component;
   }
 
   /**
@@ -88,41 +83,44 @@ class DefaultLogger extends EZLog.Base {
   /**
    * @private
    */
-  static _log (logger, content) {
+  static _log (logger, item) {
     let createdAt = Date.now();
     DefaultLogger._identityCheck(logger);
+    
+    let args = sliceArguments(arguments);
+    let content = args.slice(1);
+    
     verifyLogContent(content);
-    try {
-      check(logger.component, String);
-      check(logger.topics, [String]);
-    } catch (error) {
-      throw new Error('Invalid input.');
-    }
+    check(logger.component, String, "Logger has invalid component name.");
+    check(logger.topics, [String], "Logger has invalid topics.");
 
-    let timeCollision = Number(logger._lastLog.createdAt) === Number(createdAt);
-    let createdOrder = timeCollision ? (logger._lastLog._createdOrder + 1) : 0;
+    let timeCollision = Number(DefaultLogger._DATA.lastLog.createdAt) === Number(createdAt);
+    let createdOrder = timeCollision ? (DefaultLogger._DATA.lastLog._createdOrder + 1) : 0;
 
     let newLog = {
       'createdAt': createdAt,
       '_createdOrder': createdOrder,
       // 1 means client, 0 means server.
       'platform': Number(Meteor.isClient),
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics,
       'content': content
     }
+    
     let newlogId = logCollection.insert(newLog);
+    
     // Update last log bookkeeping.
-    logger._lastLog = {
-      '_id': newlogId,
-      'createdAt': createdAt,
-      '_createdOrder': createdOrder
-    };
+    DefaultLogger._DATA.lastLog._id = newlogId;
+    DefaultLogger._DATA.lastLog.createdAt = createdAt;
+    DefaultLogger._DATA.lastLog._createdOrder = createdOrder;
+    
     // Fetch the new log from collection.
     newLog = DefaultLogger._getLogById(logger, newlogId);
+    
     // Trigger onLog handlers synchronously.
-    logger._triggerCallbacksFor.onLog(newlogId, newLog);
+    DefaultLogger._triggerCallbacks(logger, DefaultLogger._CONSTS.EventNames.OnLog, [newlogId, newLog]);
+    
     return newlogId;
   }
 
@@ -132,34 +130,8 @@ class DefaultLogger extends EZLog.Base {
   static _onLog (logger, callback) {
     DefaultLogger._identityCheck(logger);
     check(callback, Function, 'Callback is not a function.');
-    logger._callbacks.onLog.push(callback);
-    if (!logger._callbacks.onLog.observer && logger._callbacks.onLog.length > 0) {
-      (function(logger) {
-        // Setup observer.
-        // Observer is only used for logs created at the other platform.
-        let cursor = logCollection.find({
-          'platform': Number(!Meteor.isClient),
-          'logger': DefaultLogger._loggerId,
-          'component': logger.component,
-          'topics': logger.topics
-        }, {
-          'fields': {
-            '_id': 1
-          }
-        });
-        logger._callbacks.onLog.observerStarting = true;
-        let observer = cursor.observeChanges({
-          'added': function (id, fields) {
-            if (logger._callbacks.onLog.observerStarting) return;
-            let newLog = DefaultLogger._getLogById(logger, id);
-            // Trigger onLog handlers synchronously.
-            logger._triggerCallbacksFor.onLog(id, newLog);
-          }
-        });
-        delete logger._callbacks.onLog.observerStarting;
-        logger._callbacks.onLog.observer = observer;
-      })(logger);
-    }
+    
+    DefaultLogger._registerCallback(logger, DefaultLogger._CONSTS.EventNames.OnLog, callback);
   }
 
   /**
@@ -170,11 +142,11 @@ class DefaultLogger extends EZLog.Base {
     check(id, String, 'Expect id to be a string.');
     let log = logCollection.findOne({
       '_id': id,
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics
     }, {
-      'fields': DefaultLogger._returnLogFields
+      'fields': DefaultLogger._CONSTS.ReturnLogFields
     });
     return log;
   }
@@ -186,13 +158,11 @@ class DefaultLogger extends EZLog.Base {
     DefaultLogger._identityCheck(logger);
     //else
     let cursor = logCollection.find({
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics
     }, {
-      'fields': {
-        '_id': 1
-      }
+      'fields': DefaultLogger._CONSTS.ReturnIdOnly
     });
     return cursor.count();
   }
@@ -208,16 +178,13 @@ class DefaultLogger extends EZLog.Base {
     }
     //else
     let cursor = logCollection.find({
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics
     }, {
-      'sort': [
-        ['createdAt', 'desc'],
-        ['_createdOrder', 'desc']
-      ],
+      'sort': DefaultLogger._CONSTS.ReturnLogSort,
       'limit': count,
-      'fields': DefaultLogger._returnLogFields
+      'fields': DefaultLogger._CONSTS.ReturnLogFields
     });
     let logItems = cursor.fetch();
     return logItems;
@@ -234,16 +201,13 @@ class DefaultLogger extends EZLog.Base {
     }
     //else
     let cursor = logCollection.find({
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics
     }, {
-      'sort': [
-        ['createdAt', 'asc'],
-        ['_createdOrder', 'asc']
-      ],
+      'sort': DefaultLogger._CONSTS.ReturnLogSortReversed,
       'limit': count,
-      'fields': DefaultLogger._returnLogFields
+      'fields': DefaultLogger._CONSTS.ReturnLogFields
     });
     let logItems = cursor.fetch();
     return logItems;
@@ -271,7 +235,7 @@ class DefaultLogger extends EZLog.Base {
   static _wipe (logger) {
     DefaultLogger._identityCheck(logger);
     let removeCount = logCollection.remove({
-      'logger': DefaultLogger._loggerId,
+      'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
       'topics': logger.topics
     });
@@ -289,16 +253,13 @@ class DefaultLogger extends EZLog.Base {
     Meteor.publish(publishName, function (limit) {
       check(limit, Match.Integer);
       let cursor = logCollection.find({
-        'logger': DefaultLogger._loggerId,
+        'logger': DefaultLogger._CONSTS.LoggerId,
         'component': logger.component,
         'topics': logger.topics
       }, {
-        'sort': [
-          ['createdAt', 'desc'],
-          ['_createdOrder', 'desc']
-        ],
+        'sort': DefaultLogger._CONSTS.ReturnLogSort,
         'limit': limit,
-        'fields': DefaultLogger._returnLogFields
+        'fields': DefaultLogger._CONSTS.ReturnLogFields
       });
       return cursor;
     });
@@ -314,48 +275,6 @@ class DefaultLogger extends EZLog.Base {
   }
 
   /**
-   * @static
-   * @inheritdoc
-   */
-  static log (item) {
-    let args = sliceArguments(arguments);
-    let logId = DefaultLogger._log(DefaultLogger, args);
-    return logId;
-  }
-  /** @inheritdoc */
-  static onLog (callback) {
-    DefaultLogger._onLog(DefaultLogger, callback);
-  }
-  /** @inheritdoc */
-  static getLogById (id) {
-    return DefaultLogger._getLogById(DefaultLogger, id);
-  }
-  /** @inheritdoc */
-  static count () {
-    return DefaultLogger._count(DefaultLogger);
-  }
-  /** @inheritdoc */
-  static getLatestLogs (count) {
-    return DefaultLogger._getLatestLogs(DefaultLogger, count);
-  }
-  /** @inheritdoc */
-  static getEarliestLogs (count) {
-    return DefaultLogger._getEarliestLogs(DefaultLogger, count);
-  }
-  /** @inheritdoc */
-  static wipe () {
-    return DefaultLogger._wipe(DefaultLogger);
-  }
-  /** @inheritdoc */
-  static publish () {
-    return DefaultLogger._publish(DefaultLogger);
-  }
-  /** @inheritdoc */
-  static subscribe (limit) {
-    return DefaultLogger._subscribe(DefaultLogger, limit);
-  }
-
-  /**
    * Create a default logger.
    * @constructs EZLog.DefaultLogger
    * @param {Object} [options] - Optional configurations.
@@ -366,79 +285,167 @@ class DefaultLogger extends EZLog.Base {
     super();
     DefaultLogger._initialize(this, options);
   }
-
-  /** @inheritdoc */
-  log (item) {
-    DefaultLogger._contextCheck(this);
-    let args = sliceArguments(arguments);
-    let logId = DefaultLogger._log(this, args);
-    return logId;
-  }
-  /** @inheritdoc */
-  onLog (callback) {
-    DefaultLogger._contextCheck(this);
-    DefaultLogger._onLog(this, callback);
-  }
-  /** @inheritdoc */
-  getLogById (id) {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._getLogById(this, id);
-  }
-  /** @inheritdoc */
-  count () {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._count(this);
-  }
-  /** @inheritdoc */
-  getLatestLogs (count) {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._getLatestLogs(this, count);
-  }
-  /** @inheritdoc */
-  getEarliestLogs (count) {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._getEarliestLogs(this, count);
-  }
-  /** @inheritdoc */
-  wipe () {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._wipe(this);
-  }
-  /** @inheritdoc */
-  publish () {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._publish(this);
-  }
-  /** @inheritdoc */
-  subscribe (limit) {
-    DefaultLogger._contextCheck(this);
-    return DefaultLogger._subscribe(this, limit);
-  }
 }
-DefaultLogger._returnLogFields = {
-  'createdAt': 1,
-  'logger': 1,
-  'component': 1,
-  'topics': 1,
-  'content': 1
+
+/**
+ * Gather all constants here for easy management.
+ * @private
+ */
+DefaultLogger._CONSTS = {
+  /**
+   * A unique identifier of this logger class.
+   */
+  "LoggerId": 'default',
+  "ReturnLogSort": [
+    ['createdAt', 'desc'],
+    ['_createdOrder', 'desc']
+  ],
+  "ReturnLogSortReversed": [
+    ['createdAt', 'asc'],
+    ['_createdOrder', 'asc']
+  ],
+  /**
+   * The fields to return when getting logs.
+   */
+  "ReturnLogFields": {
+    "createdAt": 1,
+    "logger": 1,
+    "component": 1,
+    "topics": 1,
+    "content": 1
+  },
+  "ReturnIdOnly": {
+    "_id": 1
+  },
+  "DefaultComponent": 'default',
+  "DefaultTopics": [],
+  "EventNames": {
+    "OnLog": 'onLog'
+  }
 };
-DefaultLogger._loggerId = 'default';
+
+/**
+ * This object stores data used in runtime.
+ * @private
+ */
+DefaultLogger._DATA = {
+  /**
+   * Stores callbacks shared across instances.
+   * @type {Object.<String, Object.<String, Array.<Function>>>}
+   */
+  "callbacks": {},
+  /**
+   * Stores observers for async callbacks.
+   * @type {Object.<String, Object.<String, Observer>>}
+   */
+  "observers": {},
+  /**
+   * Keeps track of the last log.
+   * @type {{
+   *   _id: String,
+   *   createdAt: Date,
+   *   _createdOrder: Integer
+   * }}
+   */
+  "lastLog": {
+    '_id': '',
+    'createdAt': null,
+    // In case two logs have the same log time, increment this field to
+    // distinguish the order of creation.
+    '_createdOrder': 0
+  }
+};
+
+/**
+ * @param {DefaultLogger} logger
+ * @param {String} eventName
+ * @param {Array.<*>} data
+ */
+DefaultLogger._triggerCallbacks = function (logger, eventName, data) {
+  DefaultLogger._identityCheck(logger);
+  check(eventName, String, "Event name should be a String.");
+  check(data, Array, "Data should be an Array of items.");
+  
+  // @type {Object.<String, Array.<Function>>}
+  let callbacks = DefaultLogger._DATA.callbacks[eventName];
+  if (!callbacks) return;
+  // @type {Array.<Function>}
+  let loggerCBs = callbacks[logger.signature];
+  if (!loggerCBs) return;
+  for (let cb of loggerCBs) {
+    cb.apply(logger, data);
+  }
+};
+
+/**
+ * @param {DefaultLogger} logger
+ * @param {String} eventName
+ * @param {Function} callback
+ */
+DefaultLogger._registerCallback = function (logger, eventName, callback) {
+  DefaultLogger._identityCheck(logger);
+  check(eventName, String, "Event name should be a String.");
+  check(callback, Function, "Callback should be a function.");
+
+  // @type {Object.<String, Object.<String, Array.<Function>>>}
+  let allCBs = DefaultLogger._DATA.callbacks;
+  // @type {Object.<String, Array.<Function>>}
+  let callbacks = allCBs[eventName] = allCBs[eventName] || {};
+  // @type {Array.<Function>}
+  let loggerCBs = callbacks[logger.signature] = callbacks[logger.signature] || [];
+  // Do not register the same callback twice.
+  if (loggerCBs.indexOf(callback) > -1) {
+    // Throw error?
+  } else {
+    loggerCBs.push(callback);
+  }
+  
+  // Spawn observer for async callbacks.
+  // @type {Object.<String, Object.<String, Observer>>}
+  let allOBs = DefaultLogger._DATA.observers;
+  // @type {Object.<String, Observer>}
+  let observers = allOBs[eventName] = allOBs[eventName] || {};
+  
+  if (!observers[logger.signature]) {
+    // Setup observer.
+    // New logs on the same platform would have already triggered onLog callbacks.
+    // Observer is only used for logs created at the other platform.
+    let cursor = logCollection.find({
+      'platform': Number(!Meteor.isClient),
+      'logger': DefaultLogger._CONSTS.LoggerId,
+      'component': logger.component,
+      'topics': logger.topics
+    }, {
+      'fields': DefaultLogger._CONSTS.ReturnIdOnly
+    });
+    let observer = cursor.observeChanges({
+      'added': function (observers, id, fields) {
+        let logger = this;
+        if (!observers[logger.signature]) return;
+        let newLog = DefaultLogger._getLogById(logger, id);
+        // Trigger onLog handlers synchronously.
+        DefaultLogger._triggerCallbacks(logger, DefaultLogger._CONSTS.EventNames.OnLog, [id, newLog]);
+      }.bind(logger, observers)
+    });
+    observers[logger.signature] = observer;
+  }
+};
+
 // Use the constructor to initialize static properties.
 DefaultLogger._initialize(DefaultLogger, {
-  'component': 'default',
-  'topics': []
+  "component": DefaultLogger._CONSTS.DefaultComponent,
+  "topics": DefaultLogger._CONSTS.DefaultTopics
 });
 
-const self = DefaultLogger;
-
-// Remove unsupported functions.
+// Remove unsupported functions on each platform.
 if (Meteor.isClient) {
-  self._publish = NOOP.bind(null);
-  self._wipe = NOOP.bind(null, 0);
+  DefaultLogger._publish = NOOP.bind(null);
+  DefaultLogger._wipe = NOOP.bind(null, 0);
 }
 if (Meteor.isServer) {
-  self._subscribe = NOOP.bind(null);
+  DefaultLogger._subscribe = NOOP.bind(null);
 }
 
+// Attach to namespace.
 EZLog.DefaultLogger = DefaultLogger;
 createMirror(EZLog.DefaultLogger, EZLog);
