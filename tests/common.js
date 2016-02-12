@@ -59,7 +59,7 @@ Tinytest.add('EZLog.Base is an abstract class', function (test) {
   }
 });
 
-Tinytest.add('EZLog.DefaultLogger inherits from ', function (test) {
+Tinytest.add('EZLog.DefaultLogger inherits from EZLog.Base', function (test) {
   test.equal(typeof EZLog.DefaultLogger, 'function', 'typeof EZLog.DefaultLogger is function');
   test.instanceOf(EZLog.DefaultLogger.prototype, EZLog.Base, 'EZLog.DefaultLogger inherits from EZLog.Base.');
 });
