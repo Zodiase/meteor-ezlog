@@ -72,6 +72,49 @@ testBasicAPIs('EZLog.DefaultLogger instance', new EZLog.DefaultLogger({
   ]
 }));
 
+Tinytest.add('Loggers with same signatures share callbacks', function (test) {
+  let signature = {
+    'component': 'test',
+    'topics': [
+      'fake',
+      'test'
+    ]
+  };
+  let loggerA = new EZLog.DefaultLogger(signature);
+  let loggerB = new EZLog.DefaultLogger(signature);
+
+  let flag = false;
+  loggerA.onLog(function (id) {
+    flag = true;
+  });
+  loggerB.log('test');
+  test.equal(flag, true, 'Log captured across loggers');
+});
+
+Tinytest.add('Loggers with different signatures do not share callbacks', function (test) {
+  let loggerA = new EZLog.DefaultLogger({
+    'component': 'test',
+    'topics': [
+      'fake',
+      'testA'
+    ]
+  });
+  let loggerB = new EZLog.DefaultLogger({
+    'component': 'test',
+    'topics': [
+      'fake',
+      'testB'
+    ]
+  });
+
+  let flag = false;
+  loggerA.onLog(function (id) {
+    flag = true;
+  });
+  loggerB.log('test');
+  test.equal(flag, false, 'Log not captured across loggers');
+});
+
 Tinytest.add('EZLog properties', function (test) {
   let mirroredProperties = apis;
   for (let propName of mirroredProperties) {
