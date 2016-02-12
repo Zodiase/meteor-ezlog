@@ -53,7 +53,7 @@ class DefaultLogger extends EZLog.Base {
    * @return {String} The pub/sub name.
    */
   static _getPublishName (logger) {
-    return namespace + DefaultLogger._CONSTS.LoggerId + '/' + logger.component;
+    return namespace + DefaultLogger._CONSTS.LoggerId + '/' + logger.signature;
   }
 
   /**
@@ -64,18 +64,6 @@ class DefaultLogger extends EZLog.Base {
    */
   static _identityCheck (logger) {
     if (!(logger instanceof DefaultLogger || logger === DefaultLogger)) {
-      throw new Error('Illegal invocation');
-    }
-  }
-
-  /**
-   * Helper function for checking if the context is an instance of this class.
-   * @private
-   * @param {DefaultLogger} self - The context.
-   * @throws {Error} `self` must be an instance of this class.
-   */
-  static _contextCheck (self) {
-    if (!(self instanceof DefaultLogger)) {
       throw new Error('Illegal invocation');
     }
   }
@@ -259,7 +247,7 @@ class DefaultLogger extends EZLog.Base {
       }, {
         'sort': DefaultLogger._CONSTS.ReturnLogSort,
         'limit': limit,
-        'fields': DefaultLogger._CONSTS.ReturnLogFields
+        'fields': DefaultLogger._CONSTS.PublishLogFields
       });
       return cursor;
     });
@@ -270,8 +258,16 @@ class DefaultLogger extends EZLog.Base {
    */
   static _subscribe (logger, limit) {
     DefaultLogger._identityCheck(logger);
+    
+    let subscriptions = DefaultLogger._DATA.subscriptions;
+    if (subscriptions[logger.signature]) {
+      subscriptions[logger.signature].stop();
+      delete subscriptions[logger.signature];
+    }
+    
     let publishName = DefaultLogger._getPublishName(logger);
-    return Meteor.subscribe(publishName, limit);
+    subscriptions[logger.signature] = Meteor.subscribe(publishName, limit);
+    return subscriptions[logger.signature];
   }
 
   /**
@@ -309,6 +305,20 @@ DefaultLogger._CONSTS = {
    */
   "ReturnLogFields": {
     "createdAt": 1,
+    "platform": 1,
+    "logger": 1,
+    "component": 1,
+    "topics": 1,
+    "content": 1
+  },
+  /**
+   * The fields to return when publishing logs.
+   */
+  "PublishLogFields": {
+    "createdAt": 1,
+    // Client has to know this for sorting to work.
+    "_createdOrder": 1,
+    "platform": 1,
     "logger": 1,
     "component": 1,
     "topics": 1,
@@ -339,6 +349,11 @@ DefaultLogger._DATA = {
    * @type {Object.<String, Object.<String, Observer>>}
    */
   "observers": {},
+  /**
+   * Keeps track of subscriptions. Only needed on client side.
+   * @type {Object.<String, Subscription>}
+   */
+  "subscriptions": {},
   /**
    * Keeps track of the last log.
    * @type {{
@@ -399,13 +414,13 @@ DefaultLogger._registerCallback = function (logger, eventName, callback) {
   } else {
     loggerCBs.push(callback);
   }
-  
+
   // Spawn observer for async callbacks.
   // @type {Object.<String, Object.<String, Observer>>}
   let allOBs = DefaultLogger._DATA.observers;
   // @type {Object.<String, Observer>}
   let observers = allOBs[eventName] = allOBs[eventName] || {};
-  
+
   if (!observers[logger.signature]) {
     // Setup observer.
     // New logs on the same platform would have already triggered onLog callbacks.
@@ -419,13 +434,25 @@ DefaultLogger._registerCallback = function (logger, eventName, callback) {
       'fields': DefaultLogger._CONSTS.ReturnIdOnly
     });
     let observer = cursor.observeChanges({
-      'added': function (observers, id, fields) {
+      'added': function (eventName, id, fields) {
         let logger = this;
+        
+        let allOBs = DefaultLogger._DATA.observers;
+        let observers = allOBs[eventName] = allOBs[eventName] || {};
+        
+        // This callback may be called multiple times for the initial find results. Do nothing.
         if (!observers[logger.signature]) return;
+        
+        if (Meteor.isClient) {
+          // Multiple logs may pop up due to subscribing. If the subscription is not ready, these logs are not new.
+          let subscriptions = DefaultLogger._DATA.subscriptions;
+          if (!subscriptions[logger.signature].ready()) return;
+        }
+        
         let newLog = DefaultLogger._getLogById(logger, id);
         // Trigger onLog handlers synchronously.
         DefaultLogger._triggerCallbacks(logger, DefaultLogger._CONSTS.EventNames.OnLog, [id, newLog]);
-      }.bind(logger, observers)
+      }.bind(logger, eventName)
     });
     observers[logger.signature] = observer;
   }
