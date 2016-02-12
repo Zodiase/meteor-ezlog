@@ -10,6 +10,7 @@ const {
 
 /**
  * Default logger class.
+ * Instantiate this with custom component name and topics.
  * @class
  * @extends EZLog.Base
  * @memberof EZLog
@@ -74,10 +75,10 @@ class DefaultLogger extends EZLog.Base {
   static _log (logger, item) {
     let createdAt = Date.now();
     DefaultLogger._identityCheck(logger);
-    
+
     let args = sliceArguments(arguments);
     let content = args.slice(1);
-    
+
     verifyLogContent(content);
     check(logger.component, String, "Logger has invalid component name.");
     check(logger.topics, [String], "Logger has invalid topics.");
@@ -95,20 +96,20 @@ class DefaultLogger extends EZLog.Base {
       'topics': logger.topics,
       'content': content
     }
-    
+
     let newlogId = logCollection.insert(newLog);
-    
+
     // Update last log bookkeeping.
     DefaultLogger._DATA.lastLog._id = newlogId;
     DefaultLogger._DATA.lastLog.createdAt = createdAt;
     DefaultLogger._DATA.lastLog._createdOrder = createdOrder;
-    
+
     // Fetch the new log from collection.
     newLog = DefaultLogger._getLogById(logger, newlogId);
-    
+
     // Trigger onLog handlers synchronously.
     DefaultLogger._triggerCallbacks(logger, DefaultLogger._CONSTS.EventNames.OnLog, [newlogId, newLog]);
-    
+
     return newlogId;
   }
 
@@ -118,7 +119,7 @@ class DefaultLogger extends EZLog.Base {
   static _onLog (logger, callback) {
     DefaultLogger._identityCheck(logger);
     check(callback, Function, 'Callback is not a function.');
-    
+
     DefaultLogger._registerCallback(logger, DefaultLogger._CONSTS.EventNames.OnLog, callback);
   }
 
@@ -258,13 +259,13 @@ class DefaultLogger extends EZLog.Base {
    */
   static _subscribe (logger, limit) {
     DefaultLogger._identityCheck(logger);
-    
+
     let subscriptions = DefaultLogger._DATA.subscriptions;
     if (subscriptions[logger.signature]) {
       subscriptions[logger.signature].stop();
       delete subscriptions[logger.signature];
     }
-    
+
     let publishName = DefaultLogger._getPublishName(logger);
     subscriptions[logger.signature] = Meteor.subscribe(publishName, limit);
     return subscriptions[logger.signature];
@@ -372,6 +373,8 @@ DefaultLogger._DATA = {
 };
 
 /**
+ * Trigger callbacks of this logger for this event.
+ * @private
  * @param {DefaultLogger} logger
  * @param {String} eventName
  * @param {Array.<*>} data
@@ -380,7 +383,7 @@ DefaultLogger._triggerCallbacks = function (logger, eventName, data) {
   DefaultLogger._identityCheck(logger);
   check(eventName, String, "Event name should be a String.");
   check(data, Array, "Data should be an Array of items.");
-  
+
   // @type {Object.<String, Array.<Function>>}
   let callbacks = DefaultLogger._DATA.callbacks[eventName];
   if (!callbacks) return;
@@ -393,6 +396,8 @@ DefaultLogger._triggerCallbacks = function (logger, eventName, data) {
 };
 
 /**
+ * Register a callback to this logger for this event.
+ * @private
  * @param {DefaultLogger} logger
  * @param {String} eventName
  * @param {Function} callback
@@ -436,19 +441,19 @@ DefaultLogger._registerCallback = function (logger, eventName, callback) {
     let observer = cursor.observeChanges({
       'added': function (eventName, id, fields) {
         let logger = this;
-        
+
         let allOBs = DefaultLogger._DATA.observers;
         let observers = allOBs[eventName] = allOBs[eventName] || {};
-        
+
         // This callback may be called multiple times for the initial find results. Do nothing.
         if (!observers[logger.signature]) return;
-        
+
         if (Meteor.isClient) {
           // Multiple logs may pop up due to subscribing. If the subscription is not ready, these logs are not new.
           let subscriptions = DefaultLogger._DATA.subscriptions;
           if (!subscriptions[logger.signature].ready()) return;
         }
-        
+
         let newLog = DefaultLogger._getLogById(logger, id);
         // Trigger onLog handlers synchronously.
         DefaultLogger._triggerCallbacks(logger, DefaultLogger._CONSTS.EventNames.OnLog, [id, newLog]);

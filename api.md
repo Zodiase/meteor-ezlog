@@ -1,32 +1,22 @@
 <a name="EZLog"></a>
 ## EZLog : <code>object</code>
 EZLog namespace.
+Can be used as a logger with default component name and topics.
 
 **Kind**: global namespace  
 
 * [EZLog](#EZLog) : <code>object</code>
     * [.DefaultLogger](#EZLog.DefaultLogger) ⇐ <code>[Base](#EZLog.Base)</code>
         * [new DefaultLogger([options])](#new_EZLog.DefaultLogger_new)
-        * _instance_
-            * [.log(...item)](#EZLog.Base+log) ⇒ <code>String</code>
-            * [.onLog(callback)](#EZLog.Base+onLog)
-            * [.getLogById(id)](#EZLog.Base+getLogById) ⇒ <code>LogDocument</code>
-            * [.count()](#EZLog.Base+count) ⇒ <code>Integer</code>
-            * [.getLatestLogs(count)](#EZLog.Base+getLatestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>
-            * [.getEarliestLogs(count)](#EZLog.Base+getEarliestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>
-            * [.wipe()](#EZLog.Base+wipe) ⇒ <code>Integer</code>
-            * [.publish()](#EZLog.Base+publish)
-            * [.subscribe(limit)](#EZLog.Base+subscribe) ⇒ <code>Object</code>
-        * _static_
-            * [.log()](#EZLog.DefaultLogger.log)
-            * [.onLog()](#EZLog.DefaultLogger.onLog)
-            * [.getLogById()](#EZLog.DefaultLogger.getLogById)
-            * [.count()](#EZLog.DefaultLogger.count)
-            * [.getLatestLogs()](#EZLog.DefaultLogger.getLatestLogs)
-            * [.getEarliestLogs()](#EZLog.DefaultLogger.getEarliestLogs)
-            * [.wipe()](#EZLog.DefaultLogger.wipe)
-            * [.publish()](#EZLog.DefaultLogger.publish)
-            * [.subscribe()](#EZLog.DefaultLogger.subscribe)
+        * *[.log(...item)](#EZLog.Base+log) ⇒ <code>String</code>*
+        * *[.onLog(callback)](#EZLog.Base+onLog)*
+        * *[.getLogById(id)](#EZLog.Base+getLogById) ⇒ <code>LogDocument</code>*
+        * *[.count()](#EZLog.Base+count) ⇒ <code>Integer</code>*
+        * *[.getLatestLogs(count)](#EZLog.Base+getLatestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
+        * *[.getEarliestLogs(count)](#EZLog.Base+getEarliestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
+        * *[.wipe()](#EZLog.Base+wipe) ⇒ <code>Integer</code>*
+        * *[.publish()](#EZLog.Base+publish)*
+        * *[.subscribe(limit)](#EZLog.Base+subscribe) ⇒ <code>Object</code>*
     * *[.Base](#EZLog.Base)*
         * *[new Base([options])](#new_EZLog.Base_new)*
         * _instance_
@@ -62,32 +52,22 @@ EZLog namespace.
 <a name="EZLog.DefaultLogger"></a>
 ### EZLog.DefaultLogger ⇐ <code>[Base](#EZLog.Base)</code>
 Default logger class.
+Instantiate this with custom component name and topics.
 
 **Kind**: static class of <code>[EZLog](#EZLog)</code>  
 **Extends:** <code>[Base](#EZLog.Base)</code>  
 
 * [.DefaultLogger](#EZLog.DefaultLogger) ⇐ <code>[Base](#EZLog.Base)</code>
     * [new DefaultLogger([options])](#new_EZLog.DefaultLogger_new)
-    * _instance_
-        * [.log(...item)](#EZLog.Base+log) ⇒ <code>String</code>
-        * [.onLog(callback)](#EZLog.Base+onLog)
-        * [.getLogById(id)](#EZLog.Base+getLogById) ⇒ <code>LogDocument</code>
-        * [.count()](#EZLog.Base+count) ⇒ <code>Integer</code>
-        * [.getLatestLogs(count)](#EZLog.Base+getLatestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>
-        * [.getEarliestLogs(count)](#EZLog.Base+getEarliestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>
-        * [.wipe()](#EZLog.Base+wipe) ⇒ <code>Integer</code>
-        * [.publish()](#EZLog.Base+publish)
-        * [.subscribe(limit)](#EZLog.Base+subscribe) ⇒ <code>Object</code>
-    * _static_
-        * [.log()](#EZLog.DefaultLogger.log)
-        * [.onLog()](#EZLog.DefaultLogger.onLog)
-        * [.getLogById()](#EZLog.DefaultLogger.getLogById)
-        * [.count()](#EZLog.DefaultLogger.count)
-        * [.getLatestLogs()](#EZLog.DefaultLogger.getLatestLogs)
-        * [.getEarliestLogs()](#EZLog.DefaultLogger.getEarliestLogs)
-        * [.wipe()](#EZLog.DefaultLogger.wipe)
-        * [.publish()](#EZLog.DefaultLogger.publish)
-        * [.subscribe()](#EZLog.DefaultLogger.subscribe)
+    * *[.log(...item)](#EZLog.Base+log) ⇒ <code>String</code>*
+    * *[.onLog(callback)](#EZLog.Base+onLog)*
+    * *[.getLogById(id)](#EZLog.Base+getLogById) ⇒ <code>LogDocument</code>*
+    * *[.count()](#EZLog.Base+count) ⇒ <code>Integer</code>*
+    * *[.getLatestLogs(count)](#EZLog.Base+getLatestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
+    * *[.getEarliestLogs(count)](#EZLog.Base+getEarliestLogs) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
+    * *[.wipe()](#EZLog.Base+wipe) ⇒ <code>Integer</code>*
+    * *[.publish()](#EZLog.Base+publish)*
+    * *[.subscribe(limit)](#EZLog.Base+subscribe) ⇒ <code>Object</code>*
 
 <a name="new_EZLog.DefaultLogger_new"></a>
 #### new DefaultLogger([options])
@@ -101,12 +81,11 @@ Create a default logger.
 | [options.topics] | <code>Array.&lt;String&gt;</code> | A list of topics associated with this logger. The values are case-insensitive and the order doesn't matter. Default is `[]`. |
 
 <a name="EZLog.Base+log"></a>
-#### defaultLogger.log(...item) ⇒ <code>String</code>
+#### *defaultLogger.log(...item) ⇒ <code>String</code>*
 Anywhere.
 Log the item.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[log](#EZLog.Base+log)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>String</code> - The id of the log document.  
 
 | Param | Type | Description |
@@ -114,24 +93,22 @@ Log the item.
 | ...item | <code>\*</code> | The item to be logged. |
 
 <a name="EZLog.Base+onLog"></a>
-#### defaultLogger.onLog(callback)
+#### *defaultLogger.onLog(callback)*
 Anywhere.
 Register a function to be called when there is a new log.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[onLog](#EZLog.Base+onLog)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | callback | <code>function</code> | The callback function. |
 
 <a name="EZLog.Base+getLogById"></a>
-#### defaultLogger.getLogById(id) ⇒ <code>LogDocument</code>
+#### *defaultLogger.getLogById(id) ⇒ <code>LogDocument</code>*
 Anywhere.
 Find and return the log document specified by its id.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[getLogById](#EZLog.Base+getLogById)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>LogDocument</code> - The log document.  
 
 | Param | Type | Description |
@@ -139,21 +116,19 @@ Find and return the log document specified by its id.
 | id | <code>String</code> | The id of the log document. |
 
 <a name="EZLog.Base+count"></a>
-#### defaultLogger.count() ⇒ <code>Integer</code>
+#### *defaultLogger.count() ⇒ <code>Integer</code>*
 Anywhere.
 Return the log count.
 Note that the count on client side may not reflect the count on server side.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[count](#EZLog.Base+count)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>Integer</code> - The log count.  
 <a name="EZLog.Base+getLatestLogs"></a>
-#### defaultLogger.getLatestLogs(count) ⇒ <code>Array.&lt;LogDocument&gt;</code>
+#### *defaultLogger.getLatestLogs(count) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
 Anywhere.
 Find and return the latest log documents.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[getLatestLogs](#EZLog.Base+getLatestLogs)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>Array.&lt;LogDocument&gt;</code> - The latest log documents.  
 
 | Param | Type | Description |
@@ -161,12 +136,11 @@ Find and return the latest log documents.
 | count | <code>Integer</code> | The amount of log documents to return. The actual returned amount may be less. |
 
 <a name="EZLog.Base+getEarliestLogs"></a>
-#### defaultLogger.getEarliestLogs(count) ⇒ <code>Array.&lt;LogDocument&gt;</code>
+#### *defaultLogger.getEarliestLogs(count) ⇒ <code>Array.&lt;LogDocument&gt;</code>*
 Anywhere.
 Find and return the earliest log documents.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[getEarliestLogs](#EZLog.Base+getEarliestLogs)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>Array.&lt;LogDocument&gt;</code> - The earliest log documents.  
 
 | Param | Type | Description |
@@ -174,66 +148,38 @@ Find and return the earliest log documents.
 | count | <code>Integer</code> | The amount of log documents to return. The actual returned amount may be less. |
 
 <a name="EZLog.Base+wipe"></a>
-#### defaultLogger.wipe() ⇒ <code>Integer</code>
+#### *defaultLogger.wipe() ⇒ <code>Integer</code>*
 Server.
 Remove all existing logs.
 This action creates a wipe log in the end.
 This action does nothing on client side. If you want to wipe the logs from client side, trigger the action at server side.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[wipe](#EZLog.Base+wipe)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>Integer</code> - The amount of log documents got removed.  
 <a name="EZLog.Base+publish"></a>
-#### defaultLogger.publish()
+#### *defaultLogger.publish()*
 Server.
 Publish all the log documents of this logger.
 The amount that got published is set by the subscribe function.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[publish](#EZLog.Base+publish)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 <a name="EZLog.Base+subscribe"></a>
-#### defaultLogger.subscribe(limit) ⇒ <code>Object</code>
+#### *defaultLogger.subscribe(limit) ⇒ <code>Object</code>*
 Client.
 Subscribe the latest log documents of this logger.
 
-**Kind**: instance method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-**Overrides:** <code>[subscribe](#EZLog.Base+subscribe)</code>  
+**Kind**: instance abstract method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 **Returns**: <code>Object</code> - Same as Meteor.subscribe.  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | limit | <code>Integer</code> | The maximum amount of log documents to subscribe. |
 
-<a name="EZLog.DefaultLogger.log"></a>
-#### DefaultLogger.log()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.onLog"></a>
-#### DefaultLogger.onLog()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.getLogById"></a>
-#### DefaultLogger.getLogById()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.count"></a>
-#### DefaultLogger.count()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.getLatestLogs"></a>
-#### DefaultLogger.getLatestLogs()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.getEarliestLogs"></a>
-#### DefaultLogger.getEarliestLogs()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.wipe"></a>
-#### DefaultLogger.wipe()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.publish"></a>
-#### DefaultLogger.publish()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
-<a name="EZLog.DefaultLogger.subscribe"></a>
-#### DefaultLogger.subscribe()
-**Kind**: static method of <code>[DefaultLogger](#EZLog.DefaultLogger)</code>  
 <a name="EZLog.Base"></a>
 ### *EZLog.Base*
 Abstract logger class to be inherited.
+Children should implement all of these static and instance methods.
+Static methods are provided so the class can be used as a singleton instance with default configurations.
 
 **Kind**: static abstract class of <code>[EZLog](#EZLog)</code>  
 

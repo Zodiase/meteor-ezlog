@@ -83,6 +83,8 @@ const abstractMethodError = function(methodName) {
 
 /**
  * Abstract logger class to be inherited.
+ * Children should implement all of these static and instance methods.
+ * Static methods are provided so the class can be used as a singleton instance with default configurations.
  * @abstract
  * @class
  * @memberof EZLog
@@ -300,6 +302,7 @@ class Base {
 
 /**
  * EZLog namespace.
+ * Can be used as a logger with default component name and topics.
  * @namespace
  */
 EZLog = {
