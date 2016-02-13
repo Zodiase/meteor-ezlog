@@ -53,7 +53,7 @@ meteor add zodiase:ezlog
 ### Use in Package
 In package.js:
 ```JavaScript
-api.use('zodiase:ezlog@0.0.1');
+api.use('zodiase:ezlog@0.0.2');
 ```
 
 ## Examples

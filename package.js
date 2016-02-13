@@ -1,6 +1,6 @@
 Package.describe({
   name: 'zodiase:ezlog',
-  version: '0.0.1',
+  version: '0.0.2',
   summary: 'A simple logger for meteor.',
   git: 'https://github.com/Zodiase/meteor-ezlog.git',
   documentation: 'README.md'
