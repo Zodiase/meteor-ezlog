@@ -69,6 +69,10 @@ class DefaultLogger extends EZLog.Base {
     }
   }
 
+  static _getTopicsFilter (logger) {
+    return (logger.topics.length > 0) ? logger.topics : DefaultLogger._CONSTS.ExistsFilter;
+  }
+
   /**
    * @private
    */
@@ -133,7 +137,7 @@ class DefaultLogger extends EZLog.Base {
       '_id': id,
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     }, {
       'fields': DefaultLogger._CONSTS.ReturnLogFields
     });
@@ -149,7 +153,7 @@ class DefaultLogger extends EZLog.Base {
     let cursor = logCollection.find({
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     }, {
       'fields': DefaultLogger._CONSTS.ReturnIdOnly
     });
@@ -169,7 +173,7 @@ class DefaultLogger extends EZLog.Base {
     let cursor = logCollection.find({
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     }, {
       'sort': DefaultLogger._CONSTS.ReturnLogSort,
       'limit': count,
@@ -192,7 +196,7 @@ class DefaultLogger extends EZLog.Base {
     let cursor = logCollection.find({
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     }, {
       'sort': DefaultLogger._CONSTS.ReturnLogSortReversed,
       'limit': count,
@@ -226,7 +230,7 @@ class DefaultLogger extends EZLog.Base {
     let removeCount = logCollection.remove({
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     });
     // Log wipe.
     logger.log('Logs Wiped.');
@@ -244,7 +248,7 @@ class DefaultLogger extends EZLog.Base {
       let cursor = logCollection.find({
         'logger': DefaultLogger._CONSTS.LoggerId,
         'component': logger.component,
-        'topics': logger.topics
+        'topics': DefaultLogger._getTopicsFilter(logger)
       }, {
         'sort': DefaultLogger._CONSTS.ReturnLogSort,
         'limit': limit,
@@ -330,6 +334,9 @@ DefaultLogger._CONSTS = {
   },
   "DefaultComponent": 'default',
   "DefaultTopics": [],
+  "ExistsFilter": {
+    "$exists": true
+  },
   "EventNames": {
     "OnLog": 'onLog'
   }
@@ -434,7 +441,7 @@ DefaultLogger._registerCallback = function (logger, eventName, callback) {
       'platform': Number(!Meteor.isClient),
       'logger': DefaultLogger._CONSTS.LoggerId,
       'component': logger.component,
-      'topics': logger.topics
+      'topics': DefaultLogger._getTopicsFilter(logger)
     }, {
       'fields': DefaultLogger._CONSTS.ReturnIdOnly
     });
