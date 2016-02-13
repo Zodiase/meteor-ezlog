@@ -69,6 +69,12 @@ class DefaultLogger extends EZLog.Base {
     }
   }
 
+  /**
+   * Helper function for generating filter patterns for topics.
+   * @private
+   * @param {DefaultLogger} logger - The targeted logger instance.
+   * @return {Array.<String>|{$exists: true}} The filter pattern.
+   */
   static _getTopicsFilter (logger) {
     return (logger.topics.length > 0) ? logger.topics : DefaultLogger._CONSTS.ExistsFilter;
   }

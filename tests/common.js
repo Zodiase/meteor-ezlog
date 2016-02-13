@@ -115,6 +115,25 @@ Tinytest.add('Loggers with different signatures do not share callbacks', functio
   test.equal(flag, false, 'Log not captured across loggers');
 });
 
+Tinytest.add('Loggers with no topics can fetch logs with topics', function (test) {
+  let rootLogger = new EZLog.DefaultLogger({
+    'component': 'test'
+  });
+  let childLogger = new EZLog.DefaultLogger({
+    'component': 'test',
+    'topics': [
+      'child'
+    ]
+  });
+
+  let flag = false;
+  rootLogger.onLog(function (id) {
+    flag = true;
+  });
+  childLogger.log('test');
+  test.equal(flag, false, 'Log captured by root logger');
+});
+
 Tinytest.add('EZLog properties', function (test) {
   let mirroredProperties = apis;
   for (let propName of mirroredProperties) {
