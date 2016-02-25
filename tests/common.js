@@ -29,12 +29,6 @@ Meteor.methods({
 
 let apis = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
 
-if (Meteor.isClient) {
-  Tinytest.addAsync('Wait server ready', function (test, next) {
-    Meteor.startup(next);
-  });
-}
-
 Tinytest.add('EZLog basics', function (test) {
 
   test.equal(typeof EZLog, 'object', 'typeof EZLog is object');
@@ -57,6 +51,11 @@ Tinytest.add('EZLog.Base is an abstract class', function (test) {
     test.throws(EZLog.Base[methodName]);
     test.throws(EZLog.Base.prototype[methodName]);
   }
+  // Can not instantiate a non-fully-implemented class.
+  test.throws(function () {
+    let BadClass = class BadClass extends EZLog.Base {};
+    let badInstance = new BadClass();
+  });
 });
 
 Tinytest.add('EZLog.DefaultLogger inherits from EZLog.Base', function (test) {

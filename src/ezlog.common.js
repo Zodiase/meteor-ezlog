@@ -71,10 +71,14 @@ const abstractConstructorError = function(self, AbstractBase, methodNames) {
     throw new TypeError("Can not construct abstract class.");
   }
   //else (called from child)
+  let missingMethodNames = [];
   for (let methodName of methodNames) {
-    if (this[methodName] === AbstractBase.prototype[methodName]) {
-      throw new TypeError("Please implement abstract method " + methodName + ".");
+    if (self[methodName] === AbstractBase.prototype[methodName]) {
+      missingMethodNames.push(methodName);
     }
+  }
+  if (missingMethodNames.length > 0) {
+    throw new TypeError("Please implement abstract methods " + missingMethodNames.join(', ') + ".");
   }
 };
 const abstractMethodError = function(methodName) {
@@ -194,9 +198,7 @@ class Base {
    * @param {Object} [options] - Optional configurations.
    */
   constructor(options) {
-    abstractConstructorError(this, Base, [
-      //'log'
-    ]);
+    abstractConstructorError(this, Base, mirroredProperties);
   }
 
   /**
