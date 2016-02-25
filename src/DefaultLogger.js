@@ -306,8 +306,17 @@ class DefaultLogger extends EZLog.Base {
     return removeCount;
   }
 
-  publish () {
+  publish (allow) {
     DefaultLogger._identityCheck(this);
+    if (typeof allow != 'undefined') {
+      check(allow, Function, 'Allow is not a function.');
+      let isAllowed = allow(Meteor.userId()) === true;
+      if (!isAllowed) {
+        this.ready();
+        return;
+      }
+    }
+
     let publishName = DefaultLogger._getPublishName(this);
     Meteor.publish(publishName, function (limit) {
       check(limit, Match.Integer);

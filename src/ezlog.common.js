@@ -177,8 +177,9 @@ class Base {
    * Publish all the log documents of this logger.
    * The amount that got published is set by the subscribe function.
    * @abstract
+   * @param {Function} [allow] - Optional authorization function. If anything other than `true` is returned, access is denied.
    */
-  static publish () {
+  static publish (allow) {
     abstractStaticMethodError(this, Base, 'publish', '');
   }
 
@@ -282,9 +283,11 @@ class Base {
    * Server.
    * Publish all the log documents of this logger.
    * The amount that got published is set by the subscribe function.
+   * By default all data is accessible, unless the allow authorization function is provided. Then it has to return true to allow the access.
    * @abstract
+   * @param {Function} [allow] - Optional authorization function. If anything other than `true` is returned, access is denied. The function is called with `userId` being the only argument.
    */
-  publish () {
+  publish (allow) {
     abstractMethodError('publish');
   }
 
