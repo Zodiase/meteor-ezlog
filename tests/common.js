@@ -27,11 +27,10 @@ Meteor.methods({
   }
 });
 
-let apis = ['log', 'onLog', 'getLogById', 'count', 'getLatestLogs', 'getEarliestLogs', 'wipe', 'publish', 'subscribe'];
-
 Tinytest.add('EZLog basics', function (test) {
 
-  test.equal(typeof EZLog, 'object', 'typeof EZLog is object');
+  test.equal(typeof EZLog, 'object', 'typeof EZLog is not object');
+  test.equal(typeof EZLog.constructor, 'function', 'EZLog is an instance of a class');
   // Can not use EZLog as a constructor.
   test.throws(function () {
     let logger = new EZLog();
@@ -39,66 +38,300 @@ Tinytest.add('EZLog basics', function (test) {
 
 });
 
-Tinytest.add('EZLog.Base is an abstract class', function (test) {
+Tinytest.add('#log() returns an ID', function (test) {
+  test.equal(typeof EZLog.log, 'function', 'typeof #log is not function');
 
-  test.equal(typeof EZLog.Base, 'function', 'typeof EZLog.Base is function');
-  // Can not use EZLog.Base as a constructor.
-  test.throws(function () {
-    let logger = new EZLog.Base();
+  test.isNotUndefined(EZLog.log('test'), '#log() returns an ID');
+});
+
+Tinytest.add('#onLog() can register log callback', function (test) {
+  test.equal(typeof EZLog.onLog, 'function', 'typeof #onLog is not function');
+
+  let flag = false;
+  EZLog.onLog(function (id) {
+    flag = true;
   });
-  // Can not call any of the static methods or instance methods.
-  for (let methodName of apis) {
-    test.throws(EZLog.Base[methodName]);
-    test.throws(EZLog.Base.prototype[methodName]);
+  EZLog.log('test');
+  test.equal(flag, true, 'Log not captured');
+});
+
+Tinytest.add('#onLog() can register multiple log callbacks', function (test) {
+  test.equal(typeof EZLog.onLog, 'function', 'typeof #onLog is not function');
+
+  let flags = [
+    false,
+    false
+  ];
+  let callback = function (flags, index, id) {
+    flags[index] = true;
+  };
+  // Register first callback.
+  EZLog.onLog(callback.bind(null, flags, 0));
+  // Register second callback.
+  EZLog.onLog(callback.bind(null, flags, 1));
+  EZLog.log('test');
+  test.equal(flags[0], true, 'Callback 1 is not registered');
+  test.equal(flags[1], true, 'Callback 2 is not registered');
+});
+
+Tinytest.add('#count() returns a number', function (test) {
+  test.equal(typeof EZLog.count, 'function', 'typeof #count is not function');
+
+  test.equal(typeof EZLog.count(), 'number', '#count() does not return a number');
+});
+
+Tinytest.add('#count() returns correct count', function (test) {
+  test.equal(typeof EZLog.count, 'function', 'typeof #count is not function');
+
+  let logCount = EZLog.count();
+  EZLog.onLog(function (id) {
+    logCount++;
+  });
+  EZLog.log('test');
+  test.equal(logCount, EZLog.count(), 'Log count incorrect');
+});
+
+Tinytest.add('#getLogById() returns the correct log content', function (test) {
+  test.equal(typeof EZLog.getLogById, 'function', 'typeof #getLogById is not function');
+
+  let logContent = ['test'];
+  let logId = EZLog.log.apply(EZLog, logContent);
+  let fetchedLog = EZLog.getLogById(logId);
+  test.isNotUndefined(fetchedLog, '#getLogById() returns nothing');
+  test.equal(_.isEqual(logContent, fetchedLog.content), true, '#getLogById() returns incorrect log content');
+});
+
+Tinytest.add('#getLatestLogs(1) returns the correct log', function (test) {
+  test.equal(typeof EZLog.getLatestLogs, 'function', 'typeof #getLatestLogs is not function');
+
+  let logContent = ['test'];
+  EZLog.log.apply(EZLog, logContent);
+  let latestLogs = EZLog.getLatestLogs(1);
+  test.isNotUndefined(latestLogs, '#getLatestLogs() returns nothing');
+  test.equal(latestLogs.length, 1, '#getLatestLogs() returns incorrect amount of items');
+  test.equal(_.isEqual(logContent, latestLogs[0].content), true, '#getLatestLogs() returns incorrect logs');
+});
+
+// Only test wipe on server.
+if (Meteor.isServer) {
+  Tinytest.add('#wipe() removes existing logs', function (test) {
+    test.equal(typeof EZLog.wipe, 'function', 'typeof #wipe is not function');
+
+    EZLog.wipe();
+    // Wipe would leave 1 log.
+    test.equal(EZLog.count(), 1, 'After wiping, more than 1 log is left.');
+  });
+}
+
+Tinytest.add('#getLatestLogs() returns the logs sorted correctly', function (test) {
+  test.equal(typeof EZLog.getLatestLogs, 'function', 'typeof #getLatestLogs is not function');
+
+  let logContents = [
+    ['a'], ['b'], ['c'], ['d'], ['e']
+  ];
+  for (let logContent of logContents) {
+    EZLog.log.apply(EZLog, logContent);
   }
-  // Can not instantiate a non-fully-implemented class.
-  test.throws(function () {
-    let BadClass = class BadClass extends EZLog.Base {};
-    let badInstance = new BadClass();
+  let latestLogs = EZLog.getLatestLogs(logContents.length);
+  test.equal(logContents.length, latestLogs.length, 'log count incorrect');
+  let correctCount = 0;
+  for (let i = 0, n = logContents.length; i < n; i++) {
+    let val1 = latestLogs[i].content,
+        val2 = logContents[n - 1 - i];
+    if (_.isEqual(val1, val2)) {
+      correctCount++;
+    }
+  }
+  test.equal(correctCount, logContents.length, 'latest logs sort incorrect');
+});
+
+// Client has not yet subscribed to server side yet.
+// So client only has its own data.
+// A wipe on the server would wipe all client data when synced.
+// The wipe log on the server does not show up on client.
+if (Meteor.isClient) {
+  Tinytest.addAsync('Execute #wipe()', function (test, next) {
+    // Start watching log count, since after the wipe takes effect on the client, a new wipe log will be inserted.
+    Tracker.autorun(function (comp) {
+      let logCounts = EZLog.count();
+      if (logCounts === 0) {
+        comp.stop();
+        next();
+      }
+    });
+    Meteor.call('wipe', 'singleton');
   });
-});
+  Tinytest.add('#getEarliestLogs() returns the logs sorted correctly', function (test) {
+    test.equal(typeof EZLog.getEarliestLogs, 'function', 'typeof #getEarliestLogs is not function');
 
-Tinytest.add('EZLog.DefaultLogger inherits from EZLog.Base', function (test) {
-  test.equal(typeof EZLog.DefaultLogger, 'function', 'typeof EZLog.DefaultLogger is function');
-  test.instanceOf(EZLog.DefaultLogger.prototype, EZLog.Base, 'EZLog.DefaultLogger inherits from EZLog.Base.');
-});
-testBasicAPIs('EZLog.DefaultLogger', EZLog.DefaultLogger);
-testBasicAPIs('EZLog.DefaultLogger instance', new EZLog.DefaultLogger({
-  'component': 'test',
-  'topics': [
-    'fake',
-    'test'
-  ]
-}));
+    let logContents = [
+      ['a'], ['b'], ['c'], ['d'], ['e']
+    ];
+    for (let logContent of logContents) {
+      EZLog.log.apply(EZLog, logContent);
+    }
+    let earliestLogs = EZLog.getEarliestLogs(logContents.length);
+    test.equal(logContents.length, earliestLogs.length, 'log count incorrect');
+    correctCount = 0;
+    for (let i = 0, n = logContents.length; i < n; i++) {
+      let val1 = earliestLogs[i].content,
+          val2 = logContents[i];
+      if (_.isEqual(val1, val2)) {
+        correctCount++;
+      }
+    }
+    test.equal(correctCount, logContents.length, 'earliest logs sort incorrect');
+  });
+}
+// Register the wipe target on server.
+if (Meteor.isServer) {
+  callTargets['singleton'] = EZLog;
+  Tinytest.add('#getEarliestLogs() returns the logs sorted correctly', function (test) {
+    test.equal(typeof EZLog.getEarliestLogs, 'function', 'typeof #getEarliestLogs is not function');
 
-Tinytest.add('Loggers with same signatures share callbacks', function (test) {
-  let signature = {
+    EZLog.wipe();
+    let logContents = [
+      ['a'], ['b'], ['c'], ['d'], ['e']
+    ];
+    for (let logContent of logContents) {
+      EZLog.log.apply(EZLog, logContent);
+    }
+    let earliestLogs = EZLog.getEarliestLogs(logContents.length + 1);
+    // Get rid of the first log that was created by the wipe.
+    earliestLogs.shift();
+    test.equal(logContents.length, earliestLogs.length, 'log count incorrect');
+    correctCount = 0;
+    for (let i = 0, n = logContents.length; i < n; i++) {
+      let val1 = earliestLogs[i].content,
+          val2 = logContents[i];
+      if (_.isEqual(val1, val2)) {
+        correctCount++;
+      }
+    }
+    test.equal(correctCount, logContents.length, 'earliest logs sort incorrect');
+  });
+}
+
+// Pub/sub is only testable from client side.
+let subHandle = null;
+if (Meteor.isClient) {
+  Tinytest.addAsync('Pub/sub connection', function (test, next) {
+    Meteor.call('publish', 'singleton', function (error, result) {
+      subHandle = EZLog.subscribe(1);
+      Tracker.autorun(function (comp) {
+        if (subHandle.ready()) {
+          comp.stop();
+          next();
+        }
+      });
+    });
+  });
+
+  Tinytest.addAsync('Pub/sub sync', function (test, next) {
+    if (!subHandle) {
+      next();
+    } else {
+      // Ask the server to create a log.
+      let logContent = ['test'];
+      Meteor.call('log', 'singleton', logContent, function (error, result) {
+        if (error) {
+          throw error;
+        } else {
+          // Wait till the log is synced to client and match the content.
+          let logId = result;
+          Tracker.autorun(function (comp) {
+            let lastLogs = EZLog.getLatestLogs(1);
+            if (lastLogs.length === 1) {
+              let lastLog = lastLogs[0];
+              if (lastLog._id === logId) {
+                test.equal(lastLog.content, logContent, 'sync error');
+                next();
+              }
+            }
+          });
+        }
+      });
+    }
+  });
+
+  Tinytest.add('Pub/sub disconnect', function (test) {
+    if (subHandle) {
+      subHandle.stop();
+    }
+  });
+}
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('Clean up', function (test, next) {
+    Meteor.call('wipe', 'singleton', function (error, result) {
+      if (error) {
+        throw error;
+      } else {
+        Meteor.call('count', 'singleton', function (error, result) {
+          if (error) {
+            throw error;
+          } else {
+            test.equal(result, 1, '`#count()` after `#wipe()` should be 1.');
+            next();
+          }
+        });
+      }
+    });
+  });
+}
+if (Meteor.isServer) {
+  Tinytest.add('Clean up', function (test) {
+    EZLog.wipe();
+  });
+}
+
+Tinytest.add('#createLogger() constructs new EZLogger instances', function (test) {
+  test.equal(typeof EZLog.createLogger, 'function', 'typeof #createLogger is not function');
+
+  const signature = {
     'component': 'test',
     'topics': [
       'fake',
       'test'
     ]
   };
-  let loggerA = new EZLog.DefaultLogger(signature);
-  let loggerB = new EZLog.DefaultLogger(signature);
+  const loggerA = EZLog.createLogger(signature);
+  test.isNotUndefined(loggerA, '#createLogger() returns nothing');
+  test.equal(loggerA instanceof EZLog.constructor, true, '#createLogger() returns incorrect object');
+});
+
+Tinytest.add('Loggers with same signatures share callbacks', function (test) {
+  test.equal(typeof EZLog.createLogger, 'function', 'typeof #createLogger is not function');
+
+  const signature = {
+    'component': 'test',
+    'topics': [
+      'fake',
+      'test'
+    ]
+  };
+  const loggerA = EZLog.createLogger(signature);
+  const loggerB = EZLog.createLogger(signature);
 
   let flag = false;
   loggerA.onLog(function (id) {
     flag = true;
   });
   loggerB.log('test');
-  test.equal(flag, true, 'Log captured across loggers');
+  test.equal(flag, true, 'Unable to capture log across loggers');
 });
 
 Tinytest.add('Loggers with different signatures do not share callbacks', function (test) {
-  let loggerA = new EZLog.DefaultLogger({
+  test.equal(typeof EZLog.createLogger, 'function', 'typeof #createLogger is not function');
+
+  const loggerA = EZLog.createLogger({
     'component': 'test',
     'topics': [
       'fake',
       'testA'
     ]
   });
-  let loggerB = new EZLog.DefaultLogger({
+  const loggerB = EZLog.createLogger({
     'component': 'test',
     'topics': [
       'fake',
@@ -111,14 +344,16 @@ Tinytest.add('Loggers with different signatures do not share callbacks', functio
     flag = true;
   });
   loggerB.log('test');
-  test.equal(flag, false, 'Log not captured across loggers');
+  test.equal(flag, false, 'Log captured across loggers');
 });
 
 Tinytest.add('Loggers with no topics can fetch logs with topics', function (test) {
-  let rootLogger = new EZLog.DefaultLogger({
+  test.equal(typeof EZLog.createLogger, 'function', 'typeof #createLogger is not function');
+
+  const rootLogger = EZLog.createLogger({
     'component': 'test'
   });
-  let childLogger = new EZLog.DefaultLogger({
+  const childLogger = EZLog.createLogger({
     'component': 'test',
     'topics': [
       'child'
@@ -130,265 +365,5 @@ Tinytest.add('Loggers with no topics can fetch logs with topics', function (test
     flag = true;
   });
   childLogger.log('test');
-  test.equal(flag, false, 'Log captured by root logger');
+  test.equal(flag, false, 'Unable to capture log by root logger');
 });
-
-Tinytest.add('EZLog properties', function (test) {
-  let mirroredProperties = apis;
-  for (let propName of mirroredProperties) {
-    test.equal(EZLog[propName], EZLog.DefaultLogger[propName], 'EZLog.' + propName + ' mirrors EZLog.DefaultLogger.' + propName + '');
-  }
-});
-
-function testBasicAPIs (name, logger) {
-
-  // Register the call target so the client test can finish.
-  if (Meteor.isServer) {
-    callTargets[name] = logger;
-  }
-
-  Tinytest.add(name + ' method definitions check', function (test) {
-    let methods = apis;
-    for (let propName of methods) {
-      test.equal(typeof logger[propName], 'function', 'typeof .' + propName + ' is function');
-    }
-  });
-
-  Tinytest.add(name + ' log() returns an ID', function (test) {
-    test.isNotUndefined(logger.log('test'), '.log() returns an ID');
-  });
-
-  Tinytest.add(name + ' onLog() can register log callback', function (test) {
-    let flag = false;
-    logger.onLog(function (id) {
-      flag = true;
-    });
-    logger.log('test');
-    test.equal(flag, true, 'Log captured');
-  });
-
-  Tinytest.add(name + ' onLog() can register multiple log callbacks', function (test) {
-    let flags = [
-      false,
-      false
-    ];
-    let callback = function (flags, index, id) {
-      flags[index] = true;
-    };
-    // Register first callback.
-    logger.onLog(callback.bind(null, flags, 0));
-    // Register second callback.
-    logger.onLog(callback.bind(null, flags, 1));
-    logger.log('test');
-    test.equal(flags[0], true, 'Callback 1 registered');
-    test.equal(flags[1], true, 'Callback 2 registered');
-  });
-
-  Tinytest.add(name + ' count() returns a number', function (test) {
-    test.equal(typeof logger.count(), 'number', '.count() returns a number');
-  });
-
-  Tinytest.add(name + ' count() returns correct count', function (test) {
-    let logCount = logger.count();
-    logger.onLog(function (id) {
-      logCount++;
-    });
-    logger.log('test');
-    test.equal(logCount, logger.count(), 'Log count correct');
-  });
-
-  Tinytest.add(name + ' getLogById() returns the correct log content', function (test) {
-    let logContent = ['test'];
-    let logId = logger.log.apply(logger, logContent);
-    let fetchedLog = logger.getLogById(logId);
-    test.isNotUndefined(fetchedLog, '.getLogById() returns something');
-    test.equal(aryEqual(logContent, fetchedLog.content), true, '.getLogById() returns correct log content');
-  });
-
-  Tinytest.add(name + ' latestLog(1) returns the correct log', function (test) {
-    let logContent = ['test'];
-    logger.log.apply(logger, logContent);
-    let latestLogs = logger.getLatestLogs(1);
-    test.isNotUndefined(latestLogs, '.latestLog() returns something');
-    test.equal(latestLogs.length, 1, '.latestLog() returns correct amount of items');
-    test.equal(aryEqual(logContent, latestLogs[0].content), true, '.latestLog() returns correct logs');
-  });
-
-  // Only test wipe on server.
-  if (Meteor.isServer) {
-    Tinytest.add(name + ' wipe() removes existing logs', function (test) {
-      logger.wipe();
-      // Wipe would leave 1 log.
-      test.equal(logger.count(), 1, 'Log wiped');
-    });
-  }
-
-  Tinytest.add(name + ' latestLog() returns the logs sorted correctly', function (test) {
-    let logContents = [
-      ['a'], ['b'], ['c'], ['d'], ['e']
-    ];
-    for (let logContent of logContents) {
-      logger.log.apply(logger, logContent);
-    }
-    let latestLogs = logger.getLatestLogs(logContents.length);
-    test.equal(logContents.length, latestLogs.length, 'log count correct');
-    let correctCount = 0;
-    for (let i = 0, n = logContents.length; i < n; i++) {
-      let val1 = latestLogs[i].content,
-          val2 = logContents[n - 1 - i];
-      if (aryEqual(val1, val2)) {
-        correctCount++;
-      }
-    }
-    test.equal(correctCount, logContents.length, 'latest logs sort correct');
-  });
-
-  // Client has not yet subscribed to server side yet.
-  // So client only has its own data.
-  // A wipe on the server would wipe all client data when synced.
-  // The wipe log on the server does not show up on client.
-  if (Meteor.isClient) {
-    Tinytest.addAsync(name + ' execute wipe()', function (test, next) {
-      // Start watching log count, since after the wipe takes effect on the client, a new wipe log will be inserted.
-      Tracker.autorun(function (comp) {
-        let logCounts = logger.count();
-        if (logCounts === 0) {
-          comp.stop();
-          next();
-        }
-      });
-      Meteor.call('wipe', name);
-    });
-    Tinytest.add(name + ' earliest() returns the logs sorted correctly', function (test) {
-      let logContents = [
-        ['a'], ['b'], ['c'], ['d'], ['e']
-      ];
-      for (let logContent of logContents) {
-        logger.log.apply(logger, logContent);
-      }
-      let earliestLogs = logger.getEarliestLogs(logContents.length);
-      test.equal(logContents.length, earliestLogs.length, 'log count correct');
-      correctCount = 0;
-      for (let i = 0, n = logContents.length; i < n; i++) {
-        let val1 = earliestLogs[i].content,
-            val2 = logContents[i];
-        if (aryEqual(val1, val2)) {
-          correctCount++;
-        }
-      }
-      test.equal(correctCount, logContents.length, 'earliest logs sort correct');
-    });
-  }
-  // Register the wipe target on server.
-  if (Meteor.isServer) {
-    callTargets[name] = logger;
-    Tinytest.add(name + ' earliest() returns the logs sorted correctly', function (test) {
-      logger.wipe();
-      let logContents = [
-        ['a'], ['b'], ['c'], ['d'], ['e']
-      ];
-      for (let logContent of logContents) {
-        logger.log.apply(logger, logContent);
-      }
-      let earliestLogs = logger.getEarliestLogs(logContents.length + 1);
-      // Get rid of the first log that was created by the wipe.
-      earliestLogs.shift();
-      test.equal(logContents.length, earliestLogs.length, 'log count correct');
-      correctCount = 0;
-      for (let i = 0, n = logContents.length; i < n; i++) {
-        let val1 = earliestLogs[i].content,
-            val2 = logContents[i];
-        if (aryEqual(val1, val2)) {
-          correctCount++;
-        }
-      }
-      test.equal(correctCount, logContents.length, 'earliest logs sort correct');
-    });
-  }
-
-  // Pub/sub is only testable from client side.
-  let subHandle = null;
-  if (Meteor.isClient) {
-    Tinytest.addAsync(name + ' pub/sub connection', function (test, next) {
-      Meteor.call('publish', name, function (error, result) {
-        subHandle = logger.subscribe(1);
-        Tracker.autorun(function (comp) {
-          if (subHandle.ready()) {
-            comp.stop();
-            next();
-          }
-        });
-      });
-    });
-
-    Tinytest.addAsync(name + ' pub/sub sync', function (test, next) {
-      if (!subHandle) {
-        next();
-      } else {
-        // Ask the server to create a log.
-        let logContent = ['test'];
-        Meteor.call('log', name, logContent, function (error, result) {
-          if (error) {
-            throw error;
-          } else {
-            // Wait till the log is synced to client and match the content.
-            let logId = result;
-            Tracker.autorun(function (comp) {
-              let lastLogs = logger.getLatestLogs(1);
-              if (lastLogs.length === 1) {
-                let lastLog = lastLogs[0];
-                if (lastLog._id === logId) {
-                  test.equal(lastLog.content, logContent, 'sync content');
-                  next();
-                }
-              }
-            });
-          }
-        });
-      }
-    });
-
-    Tinytest.add(name + ' pub/sub disconnect', function (test) {
-      if (subHandle) {
-        subHandle.stop();
-      }
-    });
-  }
-
-  if (Meteor.isClient) {
-    Tinytest.addAsync(name + ' clean up', function (test, next) {
-      Meteor.call('wipe', name, function (error, result) {
-        if (error) {
-          throw error;
-        } else {
-          Meteor.call('count', name, function (error, result) {
-            if (error) {
-              throw error;
-            } else {
-              test.equal(result, 1, 'count() after wipe() should be 1.');
-              next();
-            }
-          });
-        }
-      });
-    });
-  }
-  if (Meteor.isServer) {
-    Tinytest.add(name + ' clean up', function (test) {
-      logger.wipe();
-    });
-  }
-}
-
-function aryEqual(ary1, ary2) {
-  if (ary1.length != ary2.length) {
-    return false;
-  } else {
-    for (let i = 0, n = ary1.length; i < n; i++) {
-      if (ary1[i] != ary2[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-}

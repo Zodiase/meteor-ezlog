@@ -5,8 +5,7 @@ This logging library lets you categorize logs by `component` and `topics`. Logs 
 
 For example, you can have a logger for your REST interfaces that only tracks successful writes:
 ```JavaScript
-const EZLogger = EZLog.DefaultLogger;
-let restGoodWriteLogger = new EZLogger({
+let restGoodWriteLogger = EZLog.createLogger({
   "component": "REST",
   "topics": ["write", "good"]
 });
@@ -20,25 +19,12 @@ function onSuccessfulWrite(id, meta) {
 restGoodWriteLogger.getLatestLogs(10);
 ```
 
-You can also directly use `EZLog.DefaultLogger` without any configuration. The default `component` is `"default"` and the default `topics` is empty.
-```JavaScript
-const EZLogger = EZLog.DefaultLogger;
-
-function onSuccessfulWrite(id, meta) {
-  // `logger.log` has the same signature as `console.log`.
-  EZLogger.log(id, meta);
-}
-```
-
-As a shortcut, the apis on `EZLog.DefaultLogger` is mirrored onto the namespace `EZLog`. But you can't do `new EZLog()`.
+You can also directly use `EZLog` without any configuration. The default `component` is `"default"` and the default `topics` is empty.
 ```JavaScript
 function onSuccessfulWrite(id, meta) {
   // `logger.log` has the same signature as `console.log`.
   EZLog.log(id, meta);
 }
-
-// Don't do this.
-let logger = new EZLog(); // Will throw.
 ```
 
 See [API.md](https://github.com/Zodiase/meteor-ezlog/blob/master/api.md) for more details.
@@ -61,7 +47,7 @@ api.use('zodiase:ezlog@0.0.2');
 ### Log and Get Logs All at either Client or Server Side
 #### Client/Server
 ```JavaScript
-let logger = new EZLog.DefaultLogger({
+let logger = EZLog.createLogger({
   "component": "some-module",
   "topics": ["error", "critical", "user"]
 });
@@ -80,7 +66,7 @@ logger.getLatestLogs(10);
 ### Log at Server Side and Get Logs at Client Side.
 #### Client
 ```JavaScript
-let logger = new EZLog.DefaultLogger({
+let logger = EZLog.createLogger({
   "component": "some-module",
   "topics": ["error", "critical", "user"]
 });
@@ -102,7 +88,7 @@ logger.onLog(function(logId, logDoc) {
 
 #### Server
 ```JavaScript
-let logger = new EZLog.DefaultLogger({
+let logger = EZLog.createLogger({
   "component": "some-module",
   "topics": ["error", "critical", "user"]
 });
@@ -117,7 +103,7 @@ logger.log('foo', 'bar', 'whatever');
 ### Log at Client Side and Get Logs at Server Side.
 #### Client
 ```JavaScript
-let logger = new EZLog.DefaultLogger({
+let logger = EZLog.createLogger({
   "component": "some-module",
   "topics": ["error", "critical", "user"]
 });
@@ -128,7 +114,7 @@ logger.log('foo', 'bar', 'whatever');
 
 #### Server
 ```JavaScript
-let logger = new EZLog.DefaultLogger({
+let logger = EZLog.createLogger({
   "component": "some-module",
   "topics": ["error", "critical", "user"]
 });

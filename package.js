@@ -18,8 +18,7 @@ Package.onUse(function(api) {
 
   api.export('EZLog', ['client', 'server']);
   api.addFiles([
-    'src/ezlog.common.js',
-    'src/DefaultLogger.js'
+    'src/ezlog.common.js'
   ], ['client', 'server']);
   api.addFiles('src/ezlog.client.js', 'client');
   api.addFiles('src/ezlog.server.js', 'server');
@@ -28,6 +27,7 @@ Package.onUse(function(api) {
 Package.onTest(function(api) {
   api.use([
     'ecmascript',
+    'underscore',
     'ejson',
     'tinytest',
     'zodiase:function-bind@0.0.1', // Polyfill for PhantomJS.
